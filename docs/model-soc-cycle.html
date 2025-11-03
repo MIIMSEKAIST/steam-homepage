@@ -171,13 +171,16 @@ const $ = id => document.getElementById(id);
 const q = sel => document.querySelector(sel);
 const warn = m => $("warn").textContent = m || "";
 
+/* 입력값 영구 저장 키 */
+const LS_KEY = "soccycle:inputs:v1";
+
 /* 상구간 전압: 4.20 → 3.89 V (0.01 step, 32점 고정) */
 const UPPER_VS = Array.from({length:32}, (_,i)=> +(4.20 - 0.01*i).toFixed(2));
 const LOWER_START_V = 3.88;
 const LOWER_STEP = 0.01;
 let session = null;
 
-/* ===== Q 테이블 빌드 ===== */
+/* ===== Q 테이블 빌드 + 입력 이벤트 바인딩 ===== */
 function buildQTable(){
   const tb = $("qTable"); tb.innerHTML = "";
   UPPER_VS.forEach((v,i)=>{
@@ -187,14 +190,16 @@ function buildQTable(){
     const tdQ = document.createElement("td");
     const inp = document.createElement("input");
     inp.type = "number"; inp.step = "any"; inp.placeholder = "Ah"; inp.id = `q_${i}`;
+    // 입력 변경 즉시 저장
+    inp.addEventListener("input", saveState);
+    inp.addEventListener("change", saveState);
     tdQ.appendChild(inp);
     tr.appendChild(tdV); tr.appendChild(tdQ);
     tb.appendChild(tr);
   });
 }
-buildQTable();
 
-/* ===== 상구간 Q 일괄 붙여넣기 파서 ===== */
+/* ===== 붙여넣기 파서 ===== */
 function parseNumbersFromText(text){
   if(!text) return [];
   // 숫자/소수/지수 표기만 남기고 분리
@@ -226,10 +231,11 @@ function applyUpperQPaste(){
     $("q_"+i).value = (nums[i] ?? "").toString();
   }
   info.textContent = `32개 적용 완료 (감지 ${nums.length}개 중 32개 사용)`;
+  saveState();
 }
 $("applyUpperQ").addEventListener("click", applyUpperQPaste);
 
-/* ===== 데모/초기화 ===== */
+/* ===== 데모/초기화 (저장 포함) ===== */
 $("fillDemoQ").addEventListener("click", ()=>{
   const base = 2.10;
   for(let i=0;i<UPPER_VS.length;i++){
@@ -237,14 +243,16 @@ $("fillDemoQ").addEventListener("click", ()=>{
     $("q_"+i).value = val.toFixed(4);
   }
   $("qPasteInfo").textContent = "";
+  saveState();
 });
 $("clearQ").addEventListener("click", ()=>{
   for(let i=0;i<UPPER_VS.length;i++) $("q_"+i).value = "";
   $("upperQText").value = "";
   $("qPasteInfo").textContent = "";
+  saveState();
 });
 
-/* ===== dQ/dV 입력 처리 ===== */
+/* ===== dQ/dV 입력 처리 (저장 포함) ===== */
 $("fillDemoDqdv").addEventListener("click", ()=>{
   const rows = [];
   for(let k=0;k<=20;k++){
@@ -253,17 +261,27 @@ $("fillDemoDqdv").addEventListener("click", ()=>{
     rows.push(`${V.toFixed(2)}, ${dqdv.toFixed(4)}`);
   }
   $("dqdvText").value = rows.join("\n");
+  saveState();
 });
 $("clearDqdv").addEventListener("click", ()=>{
   $("dqdvText").value = "";
   $("dqdvFile").value = "";
+  saveState();
 });
 $("dqdvFile").addEventListener("change", async ()=>{
   const f = $("dqdvFile").files?.[0]; if(!f) return;
   const text = await f.text();
   $("dqdvText").value = text.trim();
+  saveState();
 });
 
+/* dQ/dV 텍스트, 상구간 붙여넣기 텍스트 변화 감지 저장 */
+$("dqdvText").addEventListener("input", saveState);
+$("dqdvText").addEventListener("change", saveState);
+$("upperQText").addEventListener("input", saveState);
+$("upperQText").addEventListener("change", saveState);
+
+/* ===== dQ/dV 파싱/피크 ===== */
 function parseDqdvText(){
   let text = $("dqdvText").value.trim();
   const out = [];
@@ -281,7 +299,6 @@ function parseDqdvText(){
   out.sort((a,b)=> b.V - a.V); // 전압 내림차순
   return out;
 }
-
 function smoothMovingAvg(arr, win=7){
   if(win<3 || win%2===0) win=7;
   const half = Math.floor(win/2);
@@ -339,12 +356,13 @@ async function ensureSession(){
 }
 
 /* ===== 유틸 ===== */
-function readUpperQ(){
+function readUpperQ(strict=true){
   const arr = [];
   for(let i=0;i<32;i++){
-    const v = parseFloat($("q_"+i).value);
-    if(!Number.isFinite(v)) return null;
-    arr.push(v);
+    const raw = $("q_"+i).value;
+    const v = parseFloat(raw);
+    if(strict && !Number.isFinite(v)) return null; // 실행 시에는 엄격
+    arr.push(Number.isFinite(v) ? v : NaN); // 저장 시에는 문자열 상태 허용
   }
   return arr;
 }
@@ -405,7 +423,7 @@ $("runBtn").addEventListener("click", async ()=>{
   try{
     warn("");
     // 1) 상구간 Q 32점
-    const upperQ = readUpperQ();
+    const upperQ = readUpperQ(true);
     if(!upperQ){ warn("상구간 Q 32개를 모두 숫자로 입력하거나, 일괄 붙여넣기 후 적용 버튼을 눌러주세요."); return; }
 
     // 2) dQ/dV 파싱 → 피크 추출
@@ -449,8 +467,45 @@ $("runBtn").addEventListener("click", async ()=>{
   }
 });
 
-/* 초기 안내 */
+/* ===== 상태 저장/복원 ===== */
+function collectState(){
+  const qVals = [];
+  for(let i=0;i<32;i++){
+    qVals.push(($("q_"+i).value ?? "").toString()); // 문자열 그대로 저장(미완 입력 보존)
+  }
+  return {
+    upperQText: ($("upperQText").value ?? "").toString(),
+    dqdvText: ($("dqdvText").value ?? "").toString(),
+    qVals
+  };
+}
+function saveState(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify(collectState()));
+  }catch(e){}
+}
+function restoreState(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const s = JSON.parse(raw);
+    if(s && typeof s === "object"){
+      if(typeof s.upperQText === "string") $("upperQText").value = s.upperQText;
+      if(typeof s.dqdvText === "string") $("dqdvText").value = s.dqdvText;
+      if(Array.isArray(s.qVals) && s.qVals.length === 32){
+        for(let i=0;i<32;i++){
+          $("q_"+i).value = (s.qVals[i] ?? "").toString();
+        }
+      }
+    }
+  }catch(e){}
+}
+
+/* 초기 세팅: 테이블 생성 → 복원 → 안내 → 언로드 시 저장 */
+buildQTable();
+restoreState();
 warn("상구간 Q는 32개 고정 전압(4.20→3.89 V)입니다. CSV/엑셀에서 값 32개를 복사해 붙여넣기 후 [자동 분배]를 누르세요. dQ/dV는 4.20~3.80 V 범위를 충분히 포함해 주세요.");
+window.addEventListener("beforeunload", saveState);
 </script>
 </body>
 </html>

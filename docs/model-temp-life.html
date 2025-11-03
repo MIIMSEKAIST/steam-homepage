@@ -321,37 +321,27 @@
     ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
 
     // 수평 그리드 & Y 틱/라벨
-    xAxis.ticks && yAxis.ticks.forEach((ty, i)=>{
+    yAxis.ticks.forEach(ty =>{
       const y = ymap(ty);
-      // grid line
       ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left+W, y); ctx.stroke();
-      // tick mark
       ctx.beginPath(); ctx.moveTo(left-6, y); ctx.lineTo(left, y); ctx.stroke();
-      // label
-      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-      ctx.fillText(fmtNum(ty), left-8, y);
+      ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText(fmtNum(ty), left-8, y);
     });
 
     // 수직 그리드 & X 틱/라벨
     xAxis.ticks.forEach(tx =>{
       const x = xmap(tx);
-      // grid line
       ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, top+H); ctx.stroke();
-      // tick mark
       ctx.beginPath(); ctx.moveTo(x, top+H); ctx.lineTo(x, top+H+6); ctx.stroke();
-      // label (정수 사이클)
-      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText(String(Math.round(tx)), x, top+H+8);
+      ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(String(Math.round(tx)), x, top+H+8);
     });
 
     // 축 틀(왼/하단)
-    ctx.beginPath();
-    ctx.moveTo(left, top); ctx.lineTo(left, top+H); ctx.lineTo(left+W, top+H);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(left, top+H); ctx.lineTo(left+W, top+H); ctx.stroke();
 
     // CI 밴드
     if(bandLo && bandHi){
-      ctx.fillStyle = 'rgba(167,139,250,0.22)'; // 보라 연한
+      ctx.fillStyle = 'rgba(167,139,250,0.22)';
       ctx.beginPath();
       ctx.moveTo(xmap(xs[0]), ymap(bandLo[0]));
       for(let i=1;i<xs.length;i++) ctx.lineTo(xmap(xs[i]), ymap(bandLo[i]));
@@ -366,14 +356,12 @@
     for(let i=1;i<xs.length;i++) ctx.lineTo(xmap(xs[i]), ymap(ys[i]));
     ctx.stroke();
 
-    // 라벨 (축 제목)
+    // 축 라벨
     ctx.fillStyle = textColor;
     ctx.textAlign='center'; ctx.textBaseline='alphabetic';
     ctx.fillText('Cycle (N)', left+W/2, cssH-6);
-    ctx.save(); ctx.translate(18, top+H/2); ctx.rotate(-Math.PI/2);
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('Capacity ('+unitLabel+')', 0, 0);
-    ctx.restore();
+    ctx.save(); ctx.translate(18, top+H/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('Capacity ('+unitLabel+')', 0, 0); ctx.restore();
   }
 
   // CSV
@@ -485,6 +473,49 @@
     }
   }
 
+  // ===== 입력값 저장/복원 =====
+  const LS_KEY = 'templife:inputs:v1';
+  const FIELDS = [
+    'I','V','T','C0','C0unit','N0','STEPS','EOL','ciMode','nSamples',
+    'a_mu','b_mu','c_mu','d_mu','a_sd','b_sd','c_sd','d_sd'
+  ];
+
+  function collectState(){
+    const s = {};
+    for(const id of FIELDS){
+      const el = $(id);
+      if(!el) continue;
+      s[id] = el.value ?? '';
+    }
+    return s;
+  }
+  function saveState(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(collectState())); }catch(e){}
+  }
+  function restoreState(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return;
+      const s = JSON.parse(raw);
+      if(s && typeof s === 'object'){
+        for(const id of FIELDS){
+          if(s.hasOwnProperty(id) && $(id) != null){
+            $(id).value = s[id];
+          }
+        }
+      }
+    }catch(e){}
+  }
+  // 필드 변경 시 저장
+  function bindAutosave(){
+    for(const id of FIELDS){
+      const el = $(id);
+      if(!el) continue;
+      el.addEventListener('input', saveState);
+      el.addEventListener('change', saveState);
+    }
+  }
+
   // 이벤트
   $('runBtn').addEventListener('click', runOnce);
   $('demoBtn').addEventListener('click', ()=>{
@@ -498,6 +529,7 @@
     $('EOL').value='0.80';
     $('ciMode').value='1sigma';
     $('nSamples').value='200';
+    saveState();
     warn('');
   });
   $('clearBtn').addEventListener('click', ()=>{
@@ -505,13 +537,22 @@
     $('C0unit').value='mAh';
     $('ciMode').value='off';
     $('nSamples').value='200';
+    // 고급 파라미터는 기본값 유지(비우고 싶다면 아래 두 줄 주석 해제)
+    // ['a_mu','b_mu','c_mu','d_mu','a_sd','b_sd','c_sd','d_sd'].forEach(id=> $(id).value='');
+
     // 초기 상태로 차트/표/통계 비우기
     const ctx = $('chart').getContext('2d'); ctx.clearRect(0,0,$('chart').width, $('chart').height);
     $('outTable').querySelector('tbody').innerHTML='';
     $('statFirst').textContent='—'; $('statLast').textContent='—'; $('statEOL').textContent='—';
     $('dlCsv').disabled = true;
+    saveState();
     warn('');
   });
+
+  // 초기 실행: 복원 후 바인딩
+  restoreState();
+  bindAutosave();
+  window.addEventListener('beforeunload', saveState);
 </script>
 </body>
 </html>
