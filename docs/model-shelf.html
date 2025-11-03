@@ -95,7 +95,7 @@
 
     /* 차트 */
     .chart-wrap{border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px}
-    canvas{display:block; width:100%; height:260px}
+    canvas{display:block; width:100%; height:280px}
     .legend{display:flex; gap:10px; font-size:12px; color:var(--muted); margin-top:6px}
     .legend .dot{display:inline-block; width:10px; height:10px; border-radius:50%}
   </style>
@@ -168,7 +168,7 @@
         </header>
         <div class="body">
           <div class="chart-wrap">
-            <canvas id="capChart" width="800" height="260" aria-label="용량 예측 차트"></canvas>
+            <canvas id="capChart" width="800" height="280" aria-label="용량 예측 차트"></canvas>
             <div class="legend">
               <span><span class="dot" style="background:#3b82f6"></span> 예측 곡선</span>
               <span><span class="dot" style="background:#14b8a6"></span> 관측 점</span>
@@ -350,6 +350,39 @@
       return ortSession;
     }
 
+    /* ===== 숫자 포맷 & 틱 유틸 ===== */
+    function fmtNum(n){
+      const abs = Math.abs(n);
+      let maxFD = 0;
+      if(abs < 1) maxFD = 3; else if(abs < 10) maxFD = 2; else if(abs < 100) maxFD = 1; else maxFD = 0;
+      return n.toLocaleString(undefined, {maximumFractionDigits:maxFD});
+    }
+    function niceNum(range, round){
+      const exp = Math.floor(Math.log10(range));
+      const frac = range / Math.pow(10, exp);
+      let niceFrac;
+      if(round){
+        if(frac < 1.5) niceFrac = 1;
+        else if(frac < 3) niceFrac = 2;
+        else if(frac < 7) niceFrac = 5;
+        else niceFrac = 10;
+      }else{
+        if(frac <= 1) niceFrac = 1; else if(frac <= 2) niceFrac = 2; else if(frac <= 5) niceFrac = 5; else niceFrac = 10;
+      }
+      return niceFrac * Math.pow(10, exp);
+    }
+    function niceTicks(min, max, maxTicks){
+      if(!(isFinite(min) && isFinite(max))) return {ticks:[0], niceMin:0, niceMax:1, step:1};
+      if(min === max){ max = min + 1; }
+      const range = niceNum(max - min, false);
+      const step  = niceNum(range / Math.max(2, (maxTicks-1)), true);
+      const niceMin = Math.floor(min / step) * step;
+      const niceMax = Math.ceil (max / step) * step;
+      const ticks = [];
+      for(let v = niceMin; v <= niceMax + 1e-9; v += step){ ticks.push(v); }
+      return {ticks, niceMin, niceMax, step};
+    }
+
     /* ===== 차트 ===== */
     function renderChart(observed, predicted, nextKMarkers=[]){
       const canvas = document.getElementById('capChart');
@@ -360,7 +393,7 @@
       const ctx = canvas.getContext('2d');
       ctx.setTransform(dpr,0,0,dpr,0,0);
 
-      const left=40, right=10, top=10, bottom=26;
+      const left=56, right=14, top=16, bottom=36;
       const W = cssW - left - right;
       const H = cssH - top - bottom;
 
@@ -370,22 +403,47 @@
 
       const allT = all.map(p=>p.t);
       const allC = all.map(p=>p.cap_mAh);
-      const minX = Math.min(...allT), maxX = Math.max(...allT);
-      const minY = Math.min(...allC), maxY = Math.max(...allC);
-      const xmap = x => left + (W * (x - minX)) / Math.max(1, (maxX - minX || 1));
-      const ymap = y => top + H - (H * (y - minY)) / Math.max(1e-6, (maxY - minY || 1));
+      const minT = Math.min(...allT), maxT = Math.max(...allT);
+      const minC = Math.min(...allC), maxC = Math.max(...allC);
 
-      // 축
-      ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border') || '#e6eaf1';
+      // 틱 계산 (nice)
+      const xAxis = niceTicks(minT, maxT, 8);
+      const yAxis = niceTicks(minC, maxC, 6);
+
+      const xmap = x => left + (W*(x - xAxis.niceMin))/Math.max(1,(xAxis.niceMax - xAxis.niceMin));
+      const ymap = y => top  + H - (H*(y - yAxis.niceMin))/Math.max(1e-12,(yAxis.niceMax - yAxis.niceMin));
+
+      const gridColor = getComputedStyle(document.body).getPropertyValue('--border')?.trim() || '#e6eaf1';
+      const textColor = getComputedStyle(document.body).getPropertyValue('--muted')?.trim() || '#536075';
+
+      // 그리드 + 축 틱
       ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(left, top); ctx.lineTo(left, top+H); ctx.lineTo(left+W, top+H);
-      ctx.stroke();
+      ctx.strokeStyle = gridColor;
+      ctx.fillStyle = textColor;
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+
+      // 수평 그리드 & Y라벨
+      yAxis.ticks.forEach(ty =>{
+        const y = ymap(ty);
+        ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left+W, y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(left-6, y); ctx.lineTo(left, y); ctx.stroke();
+        ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText(fmtNum(ty), left-8, y);
+      });
+
+      // 수직 그리드 & X라벨
+      xAxis.ticks.forEach(tx =>{
+        const x = xmap(tx);
+        ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, top+H); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, top+H); ctx.lineTo(x, top+H+6); ctx.stroke();
+        ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(String(Math.round(tx)), x, top+H+8);
+      });
+
+      // 축 외곽선 (왼/하단)
+      ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(left, top+H); ctx.lineTo(left+W, top+H); ctx.stroke();
 
       // 예측선
       if(predicted.length){
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(xmap(predicted[0].t), ymap(predicted[0].cap_mAh));
         for(const p of predicted){ ctx.lineTo(xmap(p.t), ymap(p.cap_mAh)); }
@@ -399,23 +457,22 @@
         ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
       }
 
-      // 다음 K개 마커 (보라색 X)
+      // 다음 K개 마커 (보라 X)
       if (nextKMarkers.length){
         ctx.strokeStyle = '#a78bfa';
         nextKMarkers.forEach(p=>{
           const x = xmap(p.t), y = ymap(p.cap_mAh);
-          ctx.beginPath();
-          ctx.moveTo(x-4, y-4); ctx.lineTo(x+4, y+4);
-          ctx.moveTo(x-4, y+4); ctx.lineTo(x+4, y-4);
-          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x-4, y-4); ctx.lineTo(x+4, y+4);
+          ctx.moveTo(x-4, y+4); ctx.lineTo(x+4, y-4); ctx.stroke();
         });
       }
 
-      // 라벨
-      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted') || '#536075';
-      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto';
-      ctx.textAlign = 'center'; ctx.fillText('t (s)', left+W/2, cssH-6);
-      ctx.save(); ctx.translate(14, top+H/2); ctx.rotate(-Math.PI/2); ctx.fillText('Capacity (mAh)', 0, 0); ctx.restore();
+      // 축 제목 라벨
+      ctx.fillStyle = textColor;
+      ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+      ctx.fillText('t (s)', left+W/2, cssH-6);
+      ctx.save(); ctx.translate(18, top+H/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('Capacity (mAh)', 0, -10); ctx.restore();
     }
 
     /* ===== CSV ===== */
