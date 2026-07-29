@@ -4,224 +4,156 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>온도 변수 사이클 수명 시험 모델 — STEAM Project Hub</title>
-  <meta name="description" content="I(방전 전류), v(방전 전압), T(주변 온도), 초기 용량 C₀을 입력하면 폐루프 없이 폐쇄형 수식으로 사이클별 방전 용량 궤적을 예측하고 그래프로 표시" />
-  <meta name="theme-color" content="#f7f9fc" />
-  <style>
-    :root{
-      --bg:#f7f9fc; --fg:#0d1117; --muted:#536075; --card:#ffffff; --border:#e6eaf1;
-      --accent:#3b82f6; --accent2:#14b8a6; --shadow:0 10px 30px rgba(0,0,0,.10); --r:18px;
-      --ease:cubic-bezier(.16,1,.3,1);
-      color-scheme: light;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",Arial}
-    a{color:inherit; text-decoration:none}
-    .container{width:min(100%,1100px); margin:0 auto; padding:24px 20px}
-
-    header{position:sticky; top:0; z-index:5; backdrop-filter:saturate(120%) blur(8px);
-      background:color-mix(in srgb,var(--bg),transparent 20%); border-bottom:1px solid var(--border)}
-    .nav{display:flex; align-items:center; justify-content:space-between; height:64px}
-    .brand{display:flex; align-items:center; gap:10px; font-weight:800}
-    .mark{width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent2))}
-
-    .hero{padding:26px 0}
-    .hero h1{margin:0 0 8px; font-size:clamp(22px,4.2vw,34px); line-height:1.15}
-    .hero p{margin:0; color:var(--muted)}
-    .crumbs{display:flex; gap:8px; align-items:center; font-size:14px; color:var(--muted)}
-    .crumbs a{color:var(--muted)}
-
-    .grid{display:grid; gap:18px; grid-template-columns:1fr; align-items:start; margin-top:14px}
-    @media (min-width:980px){ .grid{ grid-template-columns: 1.05fr .95fr; } }
-
-    .card{background:var(--card); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
-    .card header{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border)}
-    .card header h2{margin:0; font-size:18px}
-    .card .body{padding:16px}
-
-    .row{display:grid; gap:12px; grid-template-columns: 1fr}
-    @media (min-width:720px){
-      .row.cols-2{ grid-template-columns: 1fr 1fr; }
-      .row.cols-3{ grid-template-columns: 1fr 1fr 1fr; }
-    }
-
-    .label{font-size:13px; color:var(--muted); margin-bottom:6px}
-    .field{position:relative}
-    input, select, button{
-      width:100%; padding:12px 14px; border-radius:12px; background:color-mix(in srgb,var(--card),transparent 8%);
-      border:1px solid var(--border); color:var(--fg); outline:none; transition:border-color .2s var(--ease), box-shadow .2s var(--ease);
-    }
-    input::placeholder{color:color-mix(in srgb,var(--muted),transparent 30%)}
-    input:focus, select:focus{border-color:color-mix(in srgb,var(--accent),transparent 40%); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent),transparent 85%)}
-
-    .with-unit{position:relative}
-    .with-unit input{padding-right:64px}
-    .with-unit::after{content:attr(data-unit); position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:12px; pointer-events:none}
-    .inline{display:flex; gap:8px; align-items:center}
-    .inline > *{flex:1}
-
-    .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
-    .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); cursor:pointer}
-    .btn.primary{background:linear-gradient(180deg,var(--accent),#6b86ff); color:#fff; border-color:transparent}
-    .btn.ghost{background:transparent; color:var(--fg)}
-    .btn[disabled]{opacity:.6; cursor:not-allowed}
-
-    .muted{color:var(--muted)}
-    .hint{font-size:12px; color:var(--muted)}
-    .warn{font-size:12px; color:#d92b2b; margin-top:6px}
-
-    /* 출력 */
-    .stats{display:grid; gap:10px; grid-template-columns:1fr; margin-bottom:10px}
-    @media (min-width:720px){ .stats{ grid-template-columns: repeat(3, 1fr); } }
-    .stat{border:1px solid var(--border); border-radius:12px; padding:12px}
-    .stat .k{font-size:12px; color:var(--muted)} .stat .v{font-size:18px; font-weight:700}
-
-    table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border:1px solid var(--border); border-radius:12px}
-    thead th{font-size:12px; color:var(--muted); text-align:left; padding:10px}
-    tbody td{padding:10px; border-top:1px solid var(--border)}
-    tbody tr:hover{background:color-mix(in srgb,var(--card),transparent 12%)}
-
-    /* 차트 */
-    .chart-wrap{border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px}
-    canvas{display:block; width:100%; height:320px}
-    .legend{display:flex; gap:12px; font-size:12px; color:var(--muted); margin-top:6px}
-    .dot{display:inline-block; width:10px; height:10px; border-radius:50%}
+  <meta name="description" content="I(방전 전류), v(방전 전압), T(주변 온도), 초기 용량 C₀을 입력하면 폐쇄형 수식으로 사이클별 방전 용량 궤적을 예측하고 그래프로 표시" />
+  <meta name="theme-color" content="#f6f8fb" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="assets/steam.css" />
+  <script defer src="assets/steam-ui.js"></script>
+  <style data-page>
+    canvas{height:320px}
+    details summary{cursor:pointer; font-size:13.5px; color:var(--muted)}
+    details summary:hover{color:var(--fg)}
   </style>
 </head>
-<body>
-<header>
-  <div class="container nav">
-    <div class="brand"><span class="mark" aria-hidden="true"></span> STEAM Project Hub</div>
-    <nav aria-label="보조">
-      <a href="index.html" style="font-size:14px; color:var(--muted)">← 홈으로</a>
+<body data-nav="models">
+  <main class="container">
+    <nav class="crumbs" aria-label="breadcrumb">
+      <a href="index.html">홈</a><span class="sep">›</span>
+      <a href="ml.html">모델</a><span class="sep">›</span>
+      <span class="here">온도 변수 사이클 수명 시험 모델</span>
     </nav>
-  </div>
-</header>
 
-<main class="container">
-  <div class="crumbs"><a href="index.html">홈</a> › <span>머신러닝</span> › <span>온도 변수 사이클 수명 시험 모델</span></div>
+    <section class="page-hero">
+      <div class="kicker">Machine Learning Model</div>
+      <h1>온도 변수 사이클 수명 시험 모델 <span class="badge live" style="vertical-align:middle">LIVE</span></h1>
+      <p class="lead">방정식 기반 모델에 <strong>C₀ 앵커링</strong>을 적용해, 주어진 <em>I, v, T</em>에서의 사이클별 방전용량 궤적을 예측합니다. 파라미터 불확실성(±1σ 밴드) 표시를 지원합니다.</p>
+    </section>
 
-  <section class="hero">
-    <h1>온도 변수 사이클 수명 시험 모델</h1>
-    <p class="muted">방정식 기반 모델에 <strong>C₀ 앵커링</strong>을 적용해, 주어진 <em>I, v, T</em>에서의 사이클별 방전용량 궤적을 예측합니다. (선택적으로 파라미터 불확실성 ±1σ 밴드)</p>
-  </section>
+    <section class="spec-strip" aria-label="모델 정보">
+      <div class="item"><div class="k">모델 유형</div><div class="v">물리 기반 폐쇄형 수식 + 몬테카를로 불확실성</div></div>
+      <div class="item"><div class="k">입력</div><div class="v">방전 전류 I · 전압 v · 온도 T · 초기 용량 C₀</div></div>
+      <div class="item"><div class="k">출력</div><div class="v">사이클별 용량 궤적 · EOL 도달 사이클</div></div>
+      <div class="item"><div class="k">런타임</div><div class="v">브라우저 내 계산 (외부 서버 불필요)</div></div>
+    </section>
 
-  <section class="grid">
-    <!-- 입력 -->
-    <article class="card">
-      <header><h2>입력</h2></header>
-      <div class="body">
-        <div class="row cols-3">
-          <div class="field with-unit" data-unit="A">
-            <div class="label">Discharging Current (I)</div>
-            <input id="I" type="number" step="any" placeholder="예: 1.0" />
-          </div>
-          <div class="field with-unit" data-unit="V">
-            <div class="label">Discharging Voltage (v)</div>
-            <input id="V" type="number" step="any" placeholder="예: 3.60" />
-          </div>
-          <div class="field with-unit" data-unit="°C">
-            <div class="label">Ambient Temperature (T)</div>
-            <input id="T" type="number" step="any" placeholder="예: 25" />
-          </div>
-        </div>
-
-        <div class="row cols-3" style="margin-top:8px">
-          <div class="field">
-            <div class="label">초기 방전 용량 C₀</div>
-            <div class="inline">
-              <input id="C0" type="number" step="any" placeholder="예: 2500" />
-              <select id="C0unit" style="max-width:120px">
-                <option value="mAh" selected>mAh</option>
-                <option value="Ah">Ah</option>
-              </select>
+    <section class="demo-grid">
+      <!-- 입력 -->
+      <article class="card">
+        <header>
+          <h2>입력</h2>
+          <button class="btn sm" id="demoBtn" type="button">예시 입력 채우기</button>
+        </header>
+        <div class="body">
+          <div class="row cols-3">
+            <div class="field with-unit" data-unit="A">
+              <div class="label">Discharging Current (I)</div>
+              <input id="I" type="number" step="any" placeholder="예: 1.0" />
+            </div>
+            <div class="field with-unit" data-unit="V">
+              <div class="label">Discharging Voltage (v)</div>
+              <input id="V" type="number" step="any" placeholder="예: 3.60" />
+            </div>
+            <div class="field with-unit" data-unit="°C">
+              <div class="label">Ambient Temperature (T)</div>
+              <input id="T" type="number" step="any" placeholder="예: 25" />
             </div>
           </div>
-          <div class="field">
-            <div class="label">시작 사이클 N₀</div>
-            <input id="N0" type="number" step="1" value="1" />
-          </div>
-          <div class="field">
-            <div class="label">예측 길이 (스텝 수)</div>
-            <input id="STEPS" type="number" step="1" value="600" />
-          </div>
-        </div>
 
-        <div class="row cols-3" style="margin-top:8px">
-          <div class="field with-unit" data-unit="×C₀">
-            <div class="label">EOL 비율(≤이면 중단)</div>
-            <input id="EOL" type="number" step="0.01" value="0.80" />
-          </div>
-          <div class="field">
-            <div class="label">신뢰구간 표시</div>
-            <div class="inline">
-              <select id="ciMode">
-                <option value="off" selected>끄기</option>
-                <option value="1sigma">±1σ 밴드</option>
-              </select>
-              <input id="nSamples" type="number" step="1" min="10" value="200" title="샘플 수(±1σ 계산용)" />
+          <div class="row cols-3" style="margin-top:8px">
+            <div class="field">
+              <div class="label">초기 방전 용량 C₀</div>
+              <div class="inline">
+                <input id="C0" type="number" step="any" placeholder="예: 2500" />
+                <select id="C0unit" style="max-width:120px">
+                  <option value="mAh" selected>mAh</option>
+                  <option value="Ah">Ah</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <div class="label">시작 사이클 N₀</div>
+              <input id="N0" type="number" step="1" value="1" />
+            </div>
+            <div class="field">
+              <div class="label">예측 길이 (스텝 수)</div>
+              <input id="STEPS" type="number" step="1" value="600" />
             </div>
           </div>
-          <div class="field">
-            <div class="label">CSV 내보내기</div>
-            <button class="btn ghost" id="dlCsv" type="button" disabled>CSV 다운로드</button>
-          </div>
-        </div>
 
-        <details style="margin-top:10px">
-          <summary class="muted">고급: 파라미터 (편집 가능, 기본값=후단 추정 평균±표준편차)</summary>
-          <div class="row cols-3" style="margin-top:10px">
-            <div class="field"><div class="label">a (mean)</div><input id="a_mu" type="number" step="any" value="0.1827" /></div>
-            <div class="field"><div class="label">b (mean)</div><input id="b_mu" type="number" step="any" value="0.0674" /></div>
-            <div class="field"><div class="label">c (mean)</div><input id="c_mu" type="number" step="any" value="0.0013" /></div>
-          </div>
           <div class="row cols-3" style="margin-top:8px">
-            <div class="field"><div class="label">d (mean)</div><input id="d_mu" type="number" step="any" value="-4.6316" /></div>
-            <div class="field"><div class="label">σ(a)</div><input id="a_sd" type="number" step="any" value="0.2789" /></div>
-            <div class="field"><div class="label">σ(b)</div><input id="b_sd" type="number" step="any" value="0.0365" /></div>
+            <div class="field with-unit" data-unit="×C₀">
+              <div class="label">EOL 비율(≤이면 중단)</div>
+              <input id="EOL" type="number" step="0.01" value="0.80" />
+            </div>
+            <div class="field">
+              <div class="label">신뢰구간 표시</div>
+              <div class="inline">
+                <select id="ciMode">
+                  <option value="off" selected>끄기</option>
+                  <option value="1sigma">±1σ 밴드</option>
+                </select>
+                <input id="nSamples" type="number" step="1" min="10" value="200" title="샘플 수(±1σ 계산용)" />
+              </div>
+            </div>
+            <div class="field">
+              <div class="label">CSV 내보내기</div>
+              <button class="btn" id="dlCsv" type="button" disabled style="width:100%">CSV 다운로드</button>
+            </div>
           </div>
-          <div class="row cols-3" style="margin-top:8px">
-            <div class="field"><div class="label">σ(c)</div><input id="c_sd" type="number" step="any" value="0.0004" /></div>
-            <div class="field"><div class="label">σ(d)</div><input id="d_sd" type="number" step="any" value="1.0218" /></div>
+
+          <details style="margin-top:12px">
+            <summary>고급: 파라미터 (편집 가능, 기본값=후단 추정 평균±표준편차)</summary>
+            <div class="row cols-3" style="margin-top:10px">
+              <div class="field"><div class="label">a (mean)</div><input id="a_mu" type="number" step="any" value="0.1827" /></div>
+              <div class="field"><div class="label">b (mean)</div><input id="b_mu" type="number" step="any" value="0.0674" /></div>
+              <div class="field"><div class="label">c (mean)</div><input id="c_mu" type="number" step="any" value="0.0013" /></div>
+            </div>
+            <div class="row cols-3" style="margin-top:8px">
+              <div class="field"><div class="label">d (mean)</div><input id="d_mu" type="number" step="any" value="-4.6316" /></div>
+              <div class="field"><div class="label">σ(a)</div><input id="a_sd" type="number" step="any" value="0.2789" /></div>
+              <div class="field"><div class="label">σ(b)</div><input id="b_sd" type="number" step="any" value="0.0365" /></div>
+            </div>
+            <div class="row cols-3" style="margin-top:8px">
+              <div class="field"><div class="label">σ(c)</div><input id="c_sd" type="number" step="any" value="0.0004" /></div>
+              <div class="field"><div class="label">σ(d)</div><input id="d_sd" type="number" step="any" value="1.0218" /></div>
+            </div>
+          </details>
+
+          <div class="actions">
+            <button class="btn primary" id="runBtn" type="button">실행</button>
+            <button class="btn ghost" id="clearBtn" type="button">초기화</button>
+            <span class="hint">입력 후 실행을 누르면 그래프와 표가 생성됩니다.</span>
           </div>
-        </details>
-
-        <div class="actions">
-          <button class="btn" id="demoBtn" type="button">데모 로드</button>
-          <button class="btn primary" id="runBtn" type="button">실행</button>
-          <button class="btn ghost" id="clearBtn" type="button">초기화</button>
-          <span class="hint">입력 후 실행을 누르면 그래프와 표가 생성됩니다.</span>
+          <div id="warn" class="warn"></div>
         </div>
-        <div id="warn" class="warn"></div>
-      </div>
-    </article>
+      </article>
 
-    <!-- 출력 -->
-    <article class="card">
-      <header><h2>출력</h2></header>
-      <div class="body">
-        <div class="chart-wrap">
-          <canvas id="chart" width="800" height="320" aria-label="용량 예측 차트"></canvas>
-          <div class="legend">
-            <span><span class="dot" style="background:#3b82f6"></span> 예측(평균 파라미터)</span>
-            <span><span class="dot" style="background:#a78bfa"></span> ±1σ 밴드(옵션)</span>
+      <!-- 출력 -->
+      <article class="card">
+        <header><h2>출력</h2></header>
+        <div class="body">
+          <div class="chart-wrap">
+            <canvas id="chart" width="800" height="320" aria-label="용량 예측 차트"></canvas>
+            <div class="legend">
+              <span><span class="dot" style="background:#2563eb"></span> 예측(평균 파라미터)</span>
+              <span><span class="dot" style="background:#a78bfa"></span> ±1σ 밴드(옵션)</span>
+            </div>
           </div>
-        </div>
 
-        <div class="stats">
-          <div class="stat"><div class="k">첫 예측 (N₀)</div><div class="v" id="statFirst">—</div></div>
-          <div class="stat"><div class="k">마지막 (N₀+K)</div><div class="v" id="statLast">—</div></div>
-          <div class="stat"><div class="k">EOL 도달 사이클</div><div class="v" id="statEOL">—</div></div>
-        </div>
+          <div class="stats">
+            <div class="stat"><div class="k">첫 예측 (N₀)</div><div class="v" id="statFirst">—</div></div>
+            <div class="stat"><div class="k">마지막 (N₀+K)</div><div class="v" id="statLast">—</div></div>
+            <div class="stat"><div class="k">EOL 도달 사이클</div><div class="v" id="statEOL">—</div></div>
+          </div>
 
-        <table id="outTable" aria-label="예측 테이블">
-          <thead><tr><th>Cycle N</th><th>capacity_hat</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </article>
-  </section>
-</main>
+          <table id="outTable" aria-label="예측 테이블">
+            <thead><tr><th>Cycle N</th><th>capacity_hat</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </main>
 
 <script>
   /* ===== 유틸 ===== */
@@ -311,8 +243,8 @@
     const xmap = x => left + (W*(x - xAxis.niceMin))/Math.max(1,(xAxis.niceMax - xAxis.niceMin));
     const ymap = y => top + H - (H*(y - yAxis.niceMin))/Math.max(1e-12,(yAxis.niceMax - yAxis.niceMin));
 
-    const gridColor = getComputedStyle(document.body).getPropertyValue('--border')?.trim() || '#e6eaf1';
-    const textColor = getComputedStyle(document.body).getPropertyValue('--muted')?.trim() || '#536075';
+    const gridColor = getComputedStyle(document.body).getPropertyValue('--border')?.trim() || '#e4e9f0';
+    const textColor = getComputedStyle(document.body).getPropertyValue('--muted')?.trim() || '#5b6474';
 
     // 그리드 + 축 틱
     ctx.lineWidth = 1;
@@ -350,7 +282,7 @@
     }
 
     // 예측선
-    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(xmap(xs[0]), ymap(ys[0]));
     for(let i=1;i<xs.length;i++) ctx.lineTo(xmap(xs[i]), ymap(ys[i]));
@@ -537,8 +469,6 @@
     $('C0unit').value='mAh';
     $('ciMode').value='off';
     $('nSamples').value='200';
-    // 고급 파라미터는 기본값 유지(비우고 싶다면 아래 두 줄 주석 해제)
-    // ['a_mu','b_mu','c_mu','d_mu','a_sd','b_sd','c_sd','d_sd'].forEach(id=> $(id).value='');
 
     // 초기 상태로 차트/표/통계 비우기
     const ctx = $('chart').getContext('2d'); ctx.clearRect(0,0,$('chart').width, $('chart').height);

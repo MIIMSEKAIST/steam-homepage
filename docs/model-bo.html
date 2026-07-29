@@ -5,115 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bayesian Optimization 기반 NCM811 합성 조건 추천 — STEAM Project Hub</title>
   <meta name="description" content="문헌·실험 데이터 기반 surrogate Random Forest를 이용한 NCM811 양극재 합성 조건 → 방전 용량 예측 상위 3개 (read-only 데모)" />
-  <meta name="theme-color" content="#f7f9fc" />
-  <style>
-    :root{
-      --bg:#f7f9fc; --fg:#0d1117; --muted:#536075; --card:#ffffff; --border:#e6eaf1;
-      --accent:#3b82f6; --accent2:#14b8a6; --shadow:0 10px 30px rgba(0,0,0,.10); --r:18px;
-      --ease:cubic-bezier(.16,1,.3,1);
-      color-scheme: light;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",Arial}
-    a{color:inherit; text-decoration:none}
-    .container{width:min(100%,1200px); margin:0 auto; padding:24px 20px}
-
-    header{position:sticky; top:0; z-index:5; backdrop-filter:saturate(120%) blur(8px);
-      background:color-mix(in srgb,var(--bg),transparent 20%); border-bottom:1px solid var(--border)}
-    .nav{display:flex; align-items:center; justify-content:space-between; height:64px}
-    .brand{display:flex; align-items:center; gap:10px; font-weight:800}
-    .mark{width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent2))}
-
-    .hero{padding:26px 0}
-    .hero h1{margin:0 0 8px; font-size:clamp(22px,4.2vw,34px); line-height:1.15}
-    .hero p{margin:0; color:var(--muted)}
-    .crumbs{display:flex; gap:8px; align-items:center; font-size:14px; color:var(--muted)}
-    .crumbs a{color:var(--muted)}
-
-    .card{background:var(--card); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; margin-top:14px}
-    .card header{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border)}
-    .card header h2{margin:0; font-size:18px}
-    .card .body{padding:0}
-
-    /* iframe 영역 */
-    .frame-wrap{position:relative; width:100%; min-height:920px; background:var(--bg)}
+  <meta name="theme-color" content="#f6f8fb" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="assets/steam.css" />
+  <script defer src="assets/steam-ui.js"></script>
+  <style data-page>
+    .frame-wrap{position:relative; width:100%; min-height:920px; background:#fbfcfe}
     .frame-wrap iframe{width:100%; height:100%; min-height:920px; border:0; display:block}
-    .frame-loading{position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); pointer-events:none}
-
-    .meta{padding:14px 18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; line-height:1.55}
-    .meta strong{color:var(--fg)}
-
-    .pill{display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700;
-      background:linear-gradient(180deg,var(--accent),#6b86ff); color:#fff; vertical-align:middle; margin-left:8px}
-
-    footer{padding:40px 0 60px; color:var(--muted)}
+    .frame-loading{position:absolute; inset:0; display:grid; place-items:center; color:var(--faint); pointer-events:none}
+    .meta-note{padding:14px 18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; line-height:1.6}
+    .meta-note strong{color:var(--fg)}
   </style>
 </head>
-<body>
-  <header>
-    <div class="container nav">
-      <div class="brand"><span class="mark" aria-hidden="true"></span> STEAM Project Hub</div>
-      <nav aria-label="보조">
-        <a href="index.html" style="font-size:14px; color:var(--muted)">← 홈으로</a>
-      </nav>
-    </div>
-  </header>
-
+<body data-nav="models">
   <main class="container">
-    <div class="crumbs"><a href="index.html">홈</a> › <span>머신러닝</span> › <span>Bayesian Optimization 기반 NCM811 합성 조건 추천</span></div>
+    <nav class="crumbs" aria-label="breadcrumb">
+      <a href="index.html">홈</a><span class="sep">›</span>
+      <a href="ml.html">모델</a><span class="sep">›</span>
+      <span class="here">Bayesian Optimization 기반 NCM811 합성 조건 추천</span>
+    </nav>
 
-    <section class="hero">
-      <h1>Bayesian Optimization 기반 NCM811 합성 조건 추천
-        <span class="pill">READ-ONLY DEMO</span>
-      </h1>
-      <p class="muted">문헌·실험 데이터로 학습된 Random Forest surrogate가 사용자가 지정한 합성 조건 탐색 범위에서 <strong>예측 방전 용량 상위 3개</strong>를 반환합니다.</p>
+    <section class="page-hero">
+      <div class="kicker">Machine Learning Model</div>
+      <h1>Bayesian Optimization 기반 NCM811 합성 조건 추천 <span class="badge external" style="vertical-align:middle">READ-ONLY DEMO</span></h1>
+      <p class="lead">문헌·실험 데이터로 학습된 Random Forest surrogate가 사용자가 지정한 합성 조건 탐색 범위에서 <strong>예측 방전 용량 상위 3개</strong> 조건을 반환합니다.</p>
     </section>
 
-    <article class="card">
+    <section class="spec-strip" aria-label="모델 정보">
+      <div class="item"><div class="k">모델 유형</div><div class="v">RF Surrogate + Bayesian Optimization</div></div>
+      <div class="item"><div class="k">입력</div><div class="v">합성 조건 탐색 범위 (전구체 4범주 + 소성 온도/시간 6정수)</div></div>
+      <div class="item"><div class="k">출력</div><div class="v">예측 방전 용량 상위 3개 조건 (mAh/g, 0.1 C)</div></div>
+      <div class="item"><div class="k">런타임</div><div class="v">Hugging Face Space (외부 호스팅)</div></div>
+    </section>
+
+    <article class="card" style="margin-top:16px">
       <header>
         <h2>인터랙티브 데모</h2>
+        <a class="btn sm" href="https://suenghwan-hwammi.hf.space" target="_blank" rel="noopener">새 탭에서 열기 ↗</a>
       </header>
-      <div class="body">
-        <div class="frame-wrap">
-          <div class="frame-loading" id="loadingMsg">모델 데모를 불러오는 중…</div>
-          <!--
-            ▼▼▼ HF Space 주소로 교체하세요 ▼▼▼
-            HF Space 생성 후 URL이 예: https://USERNAME-NCM811-BO.hf.space
-            (계정명/Space명에 따라 달라짐. URL 끝에 슬래시 없이 입력)
-          -->
-          <iframe
-            id="boFrame"
-            src="https://suenghwan-hwammi.hf.space"
-            title="NCM811 BO Demo"
-            allow="clipboard-write"
-            referrerpolicy="no-referrer"
-            onload="document.getElementById('loadingMsg').style.display='none'"
-          ></iframe>
-        </div>
-        <div class="meta">
-          <strong>모델 정보.</strong>
-          Surrogate: scikit-learn RandomForestRegressor (n_estimators=500, random_state=0).
-          학습 데이터: NCM811 합성·전기화학 평가 문헌 + 사내 BO 실험 결과 누적 데이터.
-          입력 공간: 4 범주형(전구체) + 6 정수(수열·1차·2차 소성 온도/시간).
-          출력 단위: mAh/g (0.1 C-rate 기준).
-          <br><br>
-          <strong>안전성.</strong> 본 데모는 옵티마이저 상태 파일을 로드하지 않으며, 사용자 입력은
-          surrogate predict에만 사용됩니다 (BO 루프의 <code>opt.tell()</code> 호출 없음 = 상태 오염 0).
-        </div>
+      <div class="frame-wrap">
+        <div class="frame-loading" id="loadingMsg">모델 데모를 불러오는 중…</div>
+        <iframe
+          id="boFrame"
+          src="https://suenghwan-hwammi.hf.space"
+          title="NCM811 BO Demo"
+          allow="clipboard-write"
+          referrerpolicy="no-referrer"
+          onload="document.getElementById('loadingMsg').style.display='none'"
+        ></iframe>
+      </div>
+      <div class="meta-note">
+        <strong>모델 정보.</strong>
+        Surrogate: scikit-learn RandomForestRegressor (n_estimators=500, random_state=0).
+        학습 데이터: NCM811 합성·전기화학 평가 문헌 + 사내 BO 실험 결과 누적 데이터.
+        입력 공간: 4 범주형(전구체) + 6 정수(수열·1차·2차 소성 온도/시간).
+        출력 단위: mAh/g (0.1 C-rate 기준).
+        <br /><br />
+        <strong>안전성.</strong> 본 데모는 옵티마이저 상태 파일을 로드하지 않으며, 사용자 입력은
+        surrogate predict에만 사용됩니다 (BO 루프의 <code class="mono">opt.tell()</code> 호출 없음 = 상태 오염 0).
       </div>
     </article>
   </main>
 
-  <footer>
-    <div class="container" style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap">
-      <div class="brand"><span class="mark" aria-hidden="true"></span> <strong>STEAM Project Hub</strong></div>
-      <div>© <span id="y"></span> STEAM Project Hub</div>
-    </div>
-  </footer>
-
   <script>
-    document.getElementById('y').textContent = new Date().getFullYear();
     // iframe 로드 실패 시 안내
     document.getElementById('boFrame').addEventListener('error', ()=>{
       document.getElementById('loadingMsg').textContent = '데모를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.';

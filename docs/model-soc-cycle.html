@@ -3,165 +3,128 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>상구간 입력 → 하구간 Capacity 예측 (V–Q 전체곡선)</title>
-  <meta name="theme-color" content="#f7f9fc" />
-  <style>
-    :root{
-      --bg:#f7f9fc; --fg:#0d1117; --muted:#536075; --card:#ffffff; --border:#e6eaf1;
-      --accent:#3b82f6; --accent2:#14b8a6; --shadow:0 10px 30px rgba(0,0,0,.10); --r:18px;
-      --ease:cubic-bezier(.16,1,.3,1);
-      color-scheme: light;
-    }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",Arial}
-    a{color:inherit;text-decoration:none}
-    .container{width:min(100%,1100px);margin:0 auto;padding:24px 20px}
-    header{position:sticky;top:0;z-index:5;backdrop-filter:saturate(120%) blur(8px);
-      background:color-mix(in srgb,var(--bg),transparent 20%); border-bottom:1px solid var(--border)}
-    .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
-    .mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2))}
-    .crumbs{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
-    .crumbs a{color:var(--muted)}
-    .hero{padding:26px 0}
-    .hero h1{margin:0 0 8px;font-size:clamp(22px,4.2vw,34px);line-height:1.15}
-    .hero p{margin:0;color:var(--muted)}
-    .grid{display:grid;gap:18px;grid-template-columns:1fr;align-items:start;margin-top:14px}
-    @media (min-width:980px){ .grid{ grid-template-columns: 1.05fr .95fr; } }
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
-    .card header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
-    .card header h2{margin:0;font-size:18px}
-    .card .body{padding:16px}
-    .row{display:grid;gap:12px;grid-template-columns:1fr}
-    @media (min-width:720px){ .row.cols-2{grid-template-columns:1fr 1fr} .row.cols-3{grid-template-columns:1fr 1fr 1fr} }
-    .label{font-size:13px;color:var(--muted);margin-bottom:6px}
-    input, textarea, select, button{
-      width:100%;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--card),transparent 8%);
-      border:1px solid var(--border);color:var(--fg);outline:none;transition:border-color .2s var(--ease),box-shadow .2s var(--ease)
-    }
-    input::placeholder, textarea::placeholder{color:color-mix(in srgb,var(--muted),transparent 30%)}
-    input:focus, textarea:focus, select:focus{border-color:color-mix(in srgb,var(--accent),transparent 40%);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent),transparent 85%)}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);cursor:pointer}
-    .btn.primary{background:linear-gradient(180deg,var(--accent),#6b86ff);color:#fff;border-color:transparent}
-    .btn.ghost{background:transparent}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .hint{font-size:12px;color:var(--muted)}
-    .warn{font-size:12px;color:#d92b2b;min-height:1.2em}
-    table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:12px;overflow:hidden}
-    thead th{font-size:12px;color:var(--muted);text-align:left;padding:8px}
-    tbody td{padding:8px;border-top:1px solid var(--border)}
-    .chart-wrap{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px}
-    canvas{display:block;width:100%;height:360px}
-    .stats{display:grid;gap:10px;grid-template-columns:1fr}
-    @media (min-width:720px){ .stats{grid-template-columns:repeat(3,1fr)} }
-    .stat{border:1px solid var(--border);border-radius:12px;padding:12px}
-    .stat .k{font-size:12px;color:var(--muted)} .stat .v{font-size:18px;font-weight:700}
-    .flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,"Liberation Mono","Courier New",monospace}
+  <title>충전도 기반 사이클 수명 시험 모델 — STEAM Project Hub</title>
+  <meta name="description" content="상구간 V–Q 곡선 32점과 dQ/dV 피크(자동 추출)로부터 하구간 용량 곡선을 예측해 전체 방전 곡선을 복원" />
+  <meta name="theme-color" content="#f6f8fb" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="assets/steam.css" />
+  <script defer src="assets/steam-ui.js"></script>
+  <style data-page>
+    canvas{height:360px}
+    .q-scroll{margin:10px 0 14px; max-height:280px; overflow:auto; border:1px solid var(--border); border-radius:var(--r-sm)}
+    .q-scroll table{border:none; border-radius:0}
   </style>
 </head>
-<body>
-<header>
-  <div class="container nav">
-    <div class="brand"><span class="mark" aria-hidden="true"></span> STEAM Project Hub</div>
-    <nav aria-label="보조">
-      <a href="index.html" style="font-size:14px;color:var(--muted)">← 홈으로</a>
+<body data-nav="models">
+  <main class="container">
+    <nav class="crumbs" aria-label="breadcrumb">
+      <a href="index.html">홈</a><span class="sep">›</span>
+      <a href="ml.html">모델</a><span class="sep">›</span>
+      <span class="here">충전도 기반 사이클 수명 시험 모델</span>
     </nav>
-  </div>
-</header>
 
-<main class="container">
-  <div class="crumbs"><a href="index.html">홈</a> › <span>머신러닝</span> › <span>상구간→하구간 Capacity 예측</span></div>
-  <section class="hero">
-    <h1>상구간 입력 → 하구간 Capacity 예측</h1>
-    <p class="muted">상구간 Q(4.20→3.89 V) 32점 + dQ/dV(4.20~3.80 V 임의 샘플)를 넣으면 3rd 피크를 추출해 ONNX(34차)로 하구간 Capacity를 예측합니다. X=Capacity(Ah), Y=Voltage(V)로 전체 곡선을 그립니다.</p>
-  </section>
+    <section class="page-hero">
+      <div class="kicker">Machine Learning Model</div>
+      <h1>충전도 기반 사이클 수명 시험 모델 <span class="badge live" style="vertical-align:middle">LIVE</span></h1>
+      <p class="lead">상구간 Q(4.20→3.89 V) 32점과 dQ/dV(4.20~3.80 V 임의 샘플)를 입력하면 3rd 피크를 자동 추출해 ONNX 모델(34차 입력)로 하구간 Capacity를 예측하고, X=Capacity(Ah)·Y=Voltage(V)의 전체 방전 곡선을 복원합니다.</p>
+    </section>
 
-  <section class="grid">
-    <!-- 좌: 입력 카드들 -->
-    <article class="card">
-      <header><h2>입력</h2></header>
-      <div class="body">
-        <!-- Q 32점 -->
-        <div class="label"><strong>① 상구간 Q 32점</strong> — 전압 고정: 4.20→3.89 V(0.01 V step, 총 32개), 단위 Ah</div>
+    <section class="spec-strip" aria-label="모델 정보">
+      <div class="item"><div class="k">모델 유형</div><div class="v">회귀 (fused 네트워크, 34차 입력)</div></div>
+      <div class="item"><div class="k">입력</div><div class="v">상구간 V–Q 32점 + dQ/dV 피크 (자동 추출)</div></div>
+      <div class="item"><div class="k">출력</div><div class="v">하구간 용량 곡선 → 전체 V–Q 곡선 복원</div></div>
+      <div class="item"><div class="k">런타임</div><div class="v">ONNX Runtime Web · 브라우저 내 추론</div></div>
+    </section>
 
-        <div class="row cols-2">
-          <div>
-            <div class="label">CSV/엑셀에서 복사한 한 줄(또는 한 열) 그대로 붙여넣기</div>
-            <textarea id="upperQText" rows="4" placeholder="예)\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.001,0.00273913,0.004830189,0.007767073,0.011569565,0.016281481,0.022136364,0.029384848,0.03862963,0.050418182,0.065605882,0.086,0.11234,0.1462,0.187585714,0.23498,0.28654"></textarea>
-            <div class="actions">
-              <button class="btn" id="applyUpperQ">붙여넣기 값 → 32칸 자동 분배</button>
-              <span class="hint">쉼표/탭/공백/줄바꿈 모두 인식 · 32개 미만/초과 시 경고</span>
+    <section class="demo-grid">
+      <!-- 좌: 입력 카드들 -->
+      <article class="card">
+        <header><h2>입력</h2></header>
+        <div class="body">
+          <!-- Q 32점 -->
+          <div class="label"><strong>① 상구간 Q 32점</strong> — 전압 고정: 4.20→3.89 V(0.01 V step, 총 32개), 단위 Ah</div>
+
+          <div class="row cols-2">
+            <div>
+              <div class="label">CSV/엑셀에서 복사한 한 줄(또는 한 열) 그대로 붙여넣기</div>
+              <textarea id="upperQText" rows="4" placeholder="예)&#10;0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.001,0.00273913,0.004830189,0.007767073,0.011569565,…"></textarea>
+              <div class="actions">
+                <button class="btn" id="applyUpperQ">붙여넣기 값 → 32칸 자동 분배</button>
+                <span class="hint">쉼표/탭/공백/줄바꿈 모두 인식 · 32개 미만/초과 시 경고</span>
+              </div>
+            </div>
+            <div>
+              <div class="label">예시/초기화</div>
+              <div class="actions" style="margin-top:0">
+                <button class="btn" id="fillDemoQ">예시로 채우기</button>
+                <button class="btn ghost" id="clearQ">초기화</button>
+              </div>
+              <div id="qPasteInfo" class="hint" style="margin-top:6px"></div>
             </div>
           </div>
-          <div>
-            <div class="label">데모/초기화</div>
-            <div class="actions">
-              <button class="btn" id="fillDemoQ">예시로 채우기</button>
-              <button class="btn ghost" id="clearQ">초기화</button>
+
+          <div class="q-scroll">
+            <table>
+              <thead><tr><th>Voltage (V)</th><th>Capacity Q (Ah)</th></tr></thead>
+              <tbody id="qTable"></tbody>
+            </table>
+          </div>
+
+          <!-- dQ/dV 업로드/붙여넣기 -->
+          <div class="label" style="margin-top:6px"><strong>② dQ/dV 샘플</strong> (권장 범위: 4.20~3.80 V / CSV 업로드 또는 텍스트 붙여넣기, 열: <span class="mono">V,dQdV</span>)</div>
+          <div class="row cols-2">
+            <div>
+              <div class="label">CSV 업로드</div>
+              <input type="file" id="dqdvFile" accept=".csv,text/csv" />
             </div>
-            <div id="qPasteInfo" class="hint" style="margin-top:6px"></div>
+            <div>
+              <div class="label">텍스트 붙여넣기 (행당 “V dQdV” 또는 “V,dQdV”)</div>
+              <textarea id="dqdvText" rows="6" placeholder="예)&#10;4.20, 0.85&#10;4.19, 0.83&#10;..."></textarea>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn" id="fillDemoDqdv">dQ/dV 예시로 채우기</button>
+            <button class="btn ghost" id="clearDqdv">초기화</button>
+            <span class="hint">내부 스무딩 &amp; 피크검출 → 전압 내림차순 기준 3번째 피크 사용(없으면 prominence 최대)</span>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:16px 0" />
+          <div class="actions" style="margin-top:0">
+            <button class="btn primary" id="runBtn">예측 실행</button>
+            <span class="hint">모델: <span class="mono">models/soc-cycle/lowercap_fused.onnx</span></span>
+          </div>
+          <div id="warn" class="warn"></div>
+
+          <div class="row cols-2" style="margin-top:10px">
+            <div class="stat"><div class="k">추출된 dQ/dV 피크(강도)</div><div class="v" id="pkI">—</div></div>
+            <div class="stat"><div class="k">추출된 dQ/dV 피크(전압)</div><div class="v" id="pkV">—</div></div>
           </div>
         </div>
+      </article>
 
-        <div style="margin:10px 0 14px; max-height:280px; overflow:auto; border:1px solid var(--border); border-radius:12px;">
-          <table>
-            <thead><tr><th>Voltage (V)</th><th>Capacity Q (Ah)</th></tr></thead>
-            <tbody id="qTable"></tbody>
-          </table>
-        </div>
-
-        <!-- dQ/dV 업로드/붙여넣기 -->
-        <div class="label" style="margin-top:6px"><strong>② dQ/dV 샘플</strong> (권장 범위: 4.20~3.80 V / CSV 업로드 또는 텍스트 붙여넣기, 열: <span class="mono">V,dQdV</span>)</div>
-        <div class="row cols-2">
-          <div>
-            <div class="label">CSV 업로드</div>
-            <input type="file" id="dqdvFile" accept=".csv,text/csv" />
+      <!-- 우: 출력 -->
+      <article class="card" id="outCard">
+        <header><h2>출력</h2></header>
+        <div class="body">
+          <div class="chart-wrap">
+            <canvas id="chart" width="900" height="360" aria-label="V–Q 예측 곡선"></canvas>
+            <div class="legend">
+              <span><span class="dot" style="background:#2563eb"></span> 상구간 입력</span>
+              <span><span class="dot" style="background:#16a34a"></span> 하구간 예측</span>
+            </div>
           </div>
-          <div>
-            <div class="label">텍스트 붙여넣기 (행당 “V dQdV” 또는 “V,dQdV”)</div>
-            <textarea id="dqdvText" rows="6" placeholder="예)\n4.20, 0.85\n4.19, 0.83\n..."></textarea>
+          <div class="stats">
+            <div class="stat"><div class="k">상구간 Q 최댓값(Ah)</div><div class="v" id="qMax">—</div></div>
+            <div class="stat"><div class="k">하구간 예측 길이(pts)</div><div class="v" id="lowLen">—</div></div>
+            <div class="stat"><div class="k">전압 범위(V)</div><div class="v" id="vRange">—</div></div>
           </div>
+          <div class="hint">그래프: X=Capacity(Ah), Y=Voltage(V).</div>
         </div>
-        <div class="actions">
-          <button class="btn" id="fillDemoDqdv">dQ/dV 예시로 채우기</button>
-          <button class="btn ghost" id="clearDqdv">초기화</button>
-          <span class="hint">내부 스무딩 & 피크검출 → 전압 내림차순 기준 3번째 피크 사용(없으면 prominence 최대)</span>
-        </div>
+      </article>
+    </section>
+  </main>
 
-        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0" />
-        <div class="actions">
-          <button class="btn primary" id="runBtn">예측 실행</button>
-          <span class="hint">모델 경로: <span class="mono">models/soc-cycle/lowercap_fused.onnx</span></span>
-        </div>
-        <div id="warn" class="warn"></div>
-
-        <div class="row cols-2" style="margin-top:10px">
-          <div class="stat"><div class="k">추출된 dQ/dV 피크(강도)</div><div class="v" id="pkI">—</div></div>
-          <div class="stat"><div class="k">추출된 dQ/dV 피크(전압)</div><div class="v" id="pkV">—</div></div>
-        </div>
-      </div>
-    </article>
-
-    <!-- 우: 출력 -->
-    <article class="card" id="outCard">
-      <header><h2>출력</h2></header>
-      <div class="body">
-        <div class="chart-wrap">
-          <canvas id="chart" width="900" height="360" aria-label="V–Q 예측 곡선"></canvas>
-        </div>
-        <div class="stats">
-          <div class="stat"><div class="k">상구간 Q 최댓값(Ah)</div><div class="v" id="qMax">—</div></div>
-          <div class="stat"><div class="k">하구간 예측 길이(pts)</div><div class="v" id="lowLen">—</div></div>
-          <div class="stat"><div class="k">전압 범위(V)</div><div class="v" id="vRange">—</div></div>
-        </div>
-        <div class="hint">그래프: X=Capacity(Ah), Y=Voltage(V). 파란선=상구간 입력, 초록선=하구간 예측.</div>
-      </div>
-    </article>
-  </section>
-</main>
-
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script src="vendor/ort.min.js"></script>
 <script>
 /* ===== 모델 경로 ===== */
 const MODEL_PATH = "models/soc-cycle/lowercap_fused.onnx";
@@ -235,7 +198,7 @@ function applyUpperQPaste(){
 }
 $("applyUpperQ").addEventListener("click", applyUpperQPaste);
 
-/* ===== 데모/초기화 (저장 포함) ===== */
+/* ===== 예시/초기화 (저장 포함) ===== */
 $("fillDemoQ").addEventListener("click", ()=>{
   const base = 2.10;
   for(let i=0;i<UPPER_VS.length;i++){
@@ -385,7 +348,7 @@ function drawQV(upperV, upperQ, lowerV, lowerQ){
   const y = (v)=> T + (1 - ( (v - vMin) / Math.max(1e-12,(vMax-vMin)) )) * h;
 
   // 축
-  ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--border')||'#e6eaf1';
+  ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--border')||'#e4e9f0';
   ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(L,T); ctx.lineTo(L,T+h); ctx.lineTo(L+w,T+h); ctx.stroke();
 
   // Q 틱
@@ -404,7 +367,7 @@ function drawQV(upperV, upperQ, lowerV, lowerQ){
 
   // 상구간(파랑)
   if(upperQ.length){
-    ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2; ctx.beginPath();
+    ctx.strokeStyle='#2563eb'; ctx.lineWidth=2; ctx.beginPath();
     ctx.moveTo(x(upperQ[0]), y(upperV[0]));
     for(let i=1;i<upperQ.length;i++) ctx.lineTo(x(upperQ[i]), y(upperV[i]));
     ctx.stroke();
@@ -501,10 +464,9 @@ function restoreState(){
   }catch(e){}
 }
 
-/* 초기 세팅: 테이블 생성 → 복원 → 안내 → 언로드 시 저장 */
+/* 초기 세팅: 테이블 생성 → 복원 → 언로드 시 저장 */
 buildQTable();
 restoreState();
-warn("상구간 Q는 32개 고정 전압(4.20→3.89 V)입니다. CSV/엑셀에서 값 32개를 복사해 붙여넣기 후 [자동 분배]를 누르세요. dQ/dV는 4.20~3.80 V 범위를 충분히 포함해 주세요.");
 window.addEventListener("beforeunload", saveState);
 </script>
 </body>

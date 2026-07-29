@@ -3,384 +3,115 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>STEAM Project Hub — 이차전지 DB & ML</title>
-  <meta name="description" content="이차전지 관련 데이터베이스와 머신러닝 모델을 한 곳에서 보고 체험하는 플랫폼의 오프라인 프로토타입" />
-  <style>
-  :root{
-    /* Light palette (항상 라이트 고정) */
-    --bg:#f7f9fc; --fg:#0d1117; --muted:#536075; --card:#ffffff; --border:#e6eaf1;
-    --accent:#3b82f6; --accent2:#14b8a6; --shadow:0 10px 30px rgba(0,0,0,.08); --r:18px;
+  <title>STEAM Project Hub — 이차전지 데이터베이스 & 머신러닝 모델 플랫폼</title>
+  <meta name="description" content="이차전지 실험·계산·문헌 데이터베이스와 머신러닝 모델 카탈로그를 한곳에서 탐색하고, 브라우저에서 바로 예측 데모를 실행하는 연구 플랫폼" />
+  <meta name="theme-color" content="#f6f8fb" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="assets/steam.css" />
+  <script defer src="assets/steam-ui.js"></script>
+  <style data-page>
+    .home-hero{padding:52px 0 10px; text-align:left}
+    .home-hero h1{margin:10px 0 14px; font-size:clamp(28px,4.6vw,44px); line-height:1.2; letter-spacing:-.03em}
+    .home-hero h1 .a1{color:var(--accent)}
+    .home-hero h1 .a2{color:var(--accent-2)}
+    .home-hero .lead{max-width:62ch; font-size:16px}
+    .home-hero .actions{margin-top:22px}
 
-    --expanded-h:78svh; --snap-top:0px;
-
-    /* motion knobs */
-    --pop-dur:3s; --overlay-dur:.7s; --pop-ease:cubic-bezier(.16,1,.3,1);
-    --pop-scale:1.06; --pop-translate:-14px; --modal-dur:.55s;
-
-    --ml-bg-size:clamp(420px,60vmin,1000px);
-    --ml-bg-zoom-closed:1; --ml-bg-zoom-open:1.02;
-
-  /* 핵심: 브라우저 자동 다크 방지(폼/스크롤바 포함) */
-    color-scheme: light;
-  }
-
-    <!-- @media (prefers-color-scheme: light){
-      :root{ --bg:#f7f9fc; --fg:#0d1117; --muted:#536075; --card:#ffffff; --border:#e6eaf1; --accent:#3b82f6; --accent2:#14b8a6;
-       }
-    } -->
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",Arial}
-    a{color:inherit; text-decoration:none}
-    .container{width:min(100%,1100px); margin:0 auto; padding:24px 20px}
-    header{position:sticky; top:0; z-index:10; backdrop-filter:saturate(120%) blur(8px); background:color-mix(in srgb,var(--bg),transparent 20%); border-bottom:1px solid var(--border)}
-    .nav{display:flex; align-items:center; justify-content:space-between; height:64px}
-    .brand{display:flex; align-items:center; gap:10px; font-weight:800}
-    .mark{width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent2))}
-
-    .hero{padding:28px 0}
-    .hero h1{margin:8px 0 6px; font-size:clamp(24px,4.5vw,40px); line-height:1.15}
-    .hero p{margin:0; color:var(--muted)}
-
-    .grid2{position:relative; display:grid; gap:20px; grid-template-columns:1fr; margin-top:22px; align-items:start}
-    @media (min-width:900px){ .grid2{grid-template-columns:1fr 1fr} }
-
-    .block{position:relative; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:20px; box-shadow:var(--shadow);
-      transform-origin: center top;
-      transition:
-        transform var(--pop-dur) var(--pop-ease),
-        opacity var(--pop-dur) ease,
-        filter var(--pop-dur) ease,
-        height var(--pop-dur) var(--pop-ease),
-        box-shadow var(--pop-dur) var(--pop-ease);
-      will-change:transform,filter,opacity,height; outline:none}
-    .block:hover,.block:focus-visible{transform:translateY(calc(var(--pop-translate) * .6)) scale(calc((var(--pop-scale) - 1) * .6 + 1)); box-shadow:0 18px 48px rgba(0,0,0,.5); filter:brightness(1.02)}
-    .block:active{transform:translateY(calc(var(--pop-translate) * .3)) scale(calc((var(--pop-scale) - 1) * .3 + 1))}
-    @media (prefers-reduced-motion: reduce){ .block{transition:none} }
-
-    .grid2:not(.jsmode)::before{content:""; position:absolute; inset:-8px; border-radius:24px; background:rgba(0,0,0,.0); transition:background var(--overlay-dur) ease; pointer-events:none;}
-    .grid2:not(.jsmode):has(.block:hover)::before,
-    .grid2:not(.jsmode):has(.block:focus-within)::before{ background:rgba(0,0,0,.45); }
-    .grid2:not(.jsmode):has(.block:hover) .block,
-    .grid2:not(.jsmode):has(.block:focus-within) .block{ opacity:.0; filter:blur(2px); transform:scale(.975); pointer-events:none }
-    .grid2:not(.jsmode):has(#block-db:hover) #block-db,
-    .grid2:not(.jsmode):has(#block-db:focus-within) #block-db,
-    .grid2:not(.jsmode):has(#block-ml:hover) #block-ml,
-    .grid2:not(.jsmode):has(#block-ml:focus-within) #block-ml{
-      opacity:1; filter:none; pointer-events:auto; z-index:2; grid-column:1 / -1;
-      transform:translateY(var(--pop-translate)) scale(var(--pop-scale));
-      height: var(--expanded-h);
-      box-shadow:0 32px 80px rgba(0,0,0,.55);
+    .gateway{display:grid; gap:18px; grid-template-columns:1fr; margin-top:14px}
+    @media (min-width:860px){ .gateway{grid-template-columns:1fr 1fr} }
+    .gate-card{
+      display:flex; flex-direction:column; background:var(--card);
+      border:1px solid var(--border); border-radius:var(--r); overflow:hidden;
+      box-shadow:var(--shadow-sm);
+      transition:transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s ease;
     }
-
-    .grid2.jsmode{position:relative}
-    .grid2.jsmode::before{content:""; position:absolute; inset:-8px; border-radius:24px; background:rgba(0,0,0,0); transition:background var(--overlay-dur) ease; pointer-events:none}
-    .grid2.jsmode.expanded::before{ background:rgba(0,0,0,.45); }
-    .grid2.jsmode .block.is-dim{ opacity:0; filter:blur(2px); transform:scale(.975); pointer-events:none; transition:
-      transform var(--pop-dur) var(--pop-ease), opacity var(--pop-dur) ease, filter var(--pop-dur) ease }
-    .grid2.jsmode .block.is-zoom{ position:absolute; left:0; right:0; width:100%; top:var(--snap-top); height:var(--expanded-h);
-      transform:translateY(var(--pop-translate)) scale(var(--pop-scale)); z-index:3; box-shadow:0 32px 80px rgba(0,0,0,.55); transition:
-      transform var(--pop-dur) var(--pop-ease), height var(--pop-dur) var(--pop-ease), box-shadow var(--pop-dur) var(--pop-ease) }
-
-    .kicker{font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--accent2); font-weight:800}
-    .title{display:flex; align-items:center; justify-content:space-between; gap:10px}
-    .title h2{margin:4px 0 8px; font-size:22px}
-    .desc{margin:0 0 12px; color:var(--muted)}
-
-    figure{margin:0; border:1px dashed var(--border); border-radius:14px; overflow:hidden; display:grid; place-items:center; background:color-mix(in srgb,var(--card),transparent 40%); min-height:220px}
-    figure img{max-width:100%; height:auto; display:block}
-    .placeholder{font-size:13px; color:var(--muted); padding:30px 10px; text-align:center}
-
-    .uploader{display:inline-flex; align-items:center; gap:10px; margin-top:12px}
-    .uploader input{display:none}
-    .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); cursor:pointer}
-    .btn.prim{background:linear-gradient(180deg,var(--accent),#6b86ff); color:#fff; border-color:transparent}
-    .hint{font-size:12px; color:var(--muted)}
-
-    footer{padding:40px 0 60px; color:var(--muted)}
-
-    /* ===== ML Overlay (in-page) ===== */
-    .ml-overlay{position:fixed; inset:0; display:grid; place-items:center;
-      background:rgba(0,0,0,0); backdrop-filter:blur(0px) saturate(110%);
-      opacity:0; pointer-events:none;
-      transition:opacity var(--overlay-dur) ease, background var(--overlay-dur) ease, backdrop-filter var(--overlay-dur) ease}
-    .ml-overlay.open{background:rgba(0,0,0,.45); backdrop-filter:blur(6px) saturate(110%); opacity:1; pointer-events:auto; z-index:999}
-
-    .ml-bg{
-      position:absolute; inset:0;
-      background-position:center; background-repeat:no-repeat;
-      background-size: var(--ml-bg-size);
-      opacity:0; transform: scale(var(--ml-bg-zoom-closed));
-      filter: blur(0px) brightness(.9) saturate(110%);
-      transition: opacity var(--overlay-dur) ease, transform var(--overlay-dur) ease, filter var(--overlay-dur) ease;
-    }
-    .ml-overlay.open .ml-bg{ opacity:1; transform: scale(var(--ml-bg-zoom-open)); filter: blur(14px) brightness(.75) saturate(110%)}
-
-    .ml-panel{width:min(98vw, 700px); max-height:88vh; background:var(--card); border:1px solid var(--border);
-      border-radius:20px; box-shadow:0 30px 90px rgba(0,0,0,.6);
-      transform:translateY(18px) scale(.98); opacity:.98;
-      transition:transform var(--modal-dur) var(--pop-ease), opacity var(--modal-dur) var(--pop-ease);
-      overflow:hidden}
-    .ml-overlay.open .ml-panel{transform:translateY(0) scale(1); opacity:1}
-    .ml-panel header{display:flex; justify-content:space-between; align-items:center; padding:16px 18px; border-bottom:1px solid var(--border)}
-    .ml-panel header h2{margin:0; font-size:20px}
-    .ml-close{border:1px solid var(--border); background:transparent; color:var(--fg); border-radius:10px; padding:6px 10px; cursor:pointer}
-
-    .ml-list{display:grid; gap:12px; padding:16px; grid-template-columns:1fr}
-    .ml-item{display:flex; text-align:left; border:1px solid var(--border); border-radius:12px; padding:14px 12px; cursor:pointer;
-      background:color-mix(in srgb,var(--card),transparent 8%);
-      transition:transform var(--pop-dur) var(--pop-ease), box-shadow var(--pop-dur) var(--pop-ease);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-    .ml-item:hover,.ml-item:focus-visible{transform:translateY(-4px) scale(1.02); box-shadow:0 16px 42px rgba(0,0,0,.5)}
-    .ml-item.active{outline:2px solid color-mix(in srgb,var(--accent),transparent 30%)}
-    #block-db .uploader,
-    #block-ml .uploader { display: none !important; }
+    .gate-card:hover{transform:translateY(-3px); box-shadow:var(--shadow-md); border-color:#c9d4e2}
+    .gate-card .thumb{aspect-ratio:21/9; overflow:hidden; border-bottom:1px solid var(--border); background:#fbfcfe}
+    .gate-card .thumb img{width:100%; height:100%; object-fit:cover}
+    .gate-card .pad{padding:18px 20px 20px; display:flex; flex-direction:column; gap:8px; flex:1}
+    .gate-card h2{margin:2px 0 0; font-size:19px; letter-spacing:-.01em}
+    .gate-card p{margin:0; color:var(--muted); font-size:14px; flex:1}
+    .gate-card .go{font-size:13.5px; font-weight:700; color:var(--accent)}
   </style>
 </head>
-<body>
-  <header>
-    <div class="container nav">
-      <div class="brand"><span class="mark" aria-hidden="true"></span> STEAM Project Hub</div>
-      <nav aria-label="보조">
-        <span style="color:var(--muted); font-size:14px">이차전지 데이터베이스 • 머신러닝 모델</span>
-      </nav>
-    </div>
-  </header>
-
+<body data-nav="home">
   <main class="container">
-    <section class="hero" aria-label="인트로">
-      <h1>이차전지 <span style="color:var(--accent)">데이터베이스</span> & <span style="color:var(--accent2)">머신러닝 모델</span> 플랫폼</h1>
+    <section class="home-hero" aria-label="소개">
+      <div class="kicker">STEAM Project · Battery Data &amp; AI Platform</div>
+      <h1>이차전지 <span class="a1">데이터베이스</span>와<br /><span class="a2">머신러닝 모델</span>을 한곳에서</h1>
+      <p class="lead">
+        실험 · 계산/시뮬레이션 · 문헌 추출 데이터를 표준화된 카탈로그로 제공하고,
+        수명 예측과 소재 설계를 위한 머신러닝 모델을 브라우저에서 바로 실행해 볼 수 있는 연구 플랫폼입니다.
+      </p>
+      <div class="actions">
+        <a class="btn primary" href="database.html">데이터베이스 탐색</a>
+        <a class="btn" href="ml.html">모델 카탈로그 보기</a>
+      </div>
     </section>
 
-    <section class="grid2" aria-label="메인 블록">
-      <!-- 왼쪽: 데이터베이스 블록 -->
-      <div class="block" id="block-db" role="link" tabindex="0" aria-labelledby="db-title" aria-describedby="db-desc" data-target="database.html">
-        <div class="title">
-          <div>
-            <div class="kicker">DATABASE</div>
-            <h2 id="db-title">데이터베이스</h2>
-          </div>
-        </div>
-        <p id="db-desc" class="desc">전극 조성·공정·사이클 조건과 성능(수명, 용량, 임피던스 등) 간의 관계를 탐색할 수 있는 공개/사내 데이터 뷰어.</p>
-        <figure>
-          <img id="dbPreview" alt="데이터베이스 대표 예시 이미지" src="assets/db_thumb_w.png"/>
-          <div class="placeholder" id="dbPH" hidden>이미지를 선택하면 여기로 미리보기가 표시됩니다.</div>
-        </figure>
-        <div class="uploader" aria-label="데이터베이스 대표 이미지 업로드">
-          <label class="btn" for="dbFile">이미지 선택</label>
-          <input id="dbFile" type="file" accept="image/*" />
-          <span class="hint">(PNG/JPG/SVG 가능)</span>
-        </div>
-      </div>
+    <section class="stats-row" aria-label="플랫폼 현황">
+      <div class="stat-card"><div class="k">공개 데이터셋</div><div class="v">16<small>건</small></div></div>
+      <div class="stat-card"><div class="k">머신러닝 모델</div><div class="v">9<small>종</small></div></div>
+      <div class="stat-card"><div class="k">인터랙티브 데모</div><div class="v">5<small>종</small></div></div>
+      <div class="stat-card"><div class="k">데이터 소스 유형</div><div class="v">3<small>종</small></div></div>
+    </section>
 
-      <!-- 오른쪽: 머신러닝 블록 (오버레이 오픈) -->
-      <div class="block" id="block-ml" role="link" tabindex="0" aria-labelledby="ml-title" aria-describedby="ml-desc">
-        <div class="title">
-          <div>
-            <div class="kicker">MACHINE LEARNING</div>
-            <h2 id="ml-title">머신러닝</h2>
-          </div>
+    <section class="gateway" aria-label="주요 섹션">
+      <a class="gate-card" href="database.html">
+        <div class="thumb"><img src="assets/db_thumb_w.png" alt="데이터베이스 미리보기" /></div>
+        <div class="pad">
+          <span class="kicker" style="color:var(--accent)">Database</span>
+          <h2>이차전지 데이터베이스</h2>
+          <p>AFM · SEM · TEM · XRD · EIS 등 실험 데이터 10종과 계산/시뮬레이션, 문헌 추출 데이터를
+             출처별로 분류한 데이터셋 카탈로그. 각 데이터셋은 저장소 링크로 바로 접근할 수 있습니다.</p>
+          <span class="go">데이터셋 카탈로그 →</span>
         </div>
-        <p id="ml-desc" class="desc">SoC-의존 확산/가역변형 추정, 수명 예측, ESM/AFM 이미지 기반 특성 추론 등 모델 카탈로그와 데모.</p>
-        <figure>
-          <img id="mlPreview" alt="머신러닝 대표 예시 이미지" src="assets/model_thumbnail.png" />
-          <div class="placeholder" id="mlPH" hidden>이미지를 선택하면 여기로 미리보기가 표시됩니다.</div>
-        </figure>
-        <div class="uploader" aria-label="머신러닝 대표 이미지 업로드">
-          <label class="btn" for="mlFile">이미지 선택</label>
-          <input id="mlFile" type="file" accept="image/*" />
-          <span class="hint">(PNG/JPG/SVG 가능)</span>
+      </a>
+      <a class="gate-card" href="ml.html">
+        <div class="thumb"><img src="assets/model_thumbnail.png" alt="머신러닝 모델 미리보기" /></div>
+        <div class="pad">
+          <span class="kicker" style="color:var(--accent-2)">Machine Learning</span>
+          <h2>머신러닝 모델 카탈로그</h2>
+          <p>사이클 수명 · 보관 수명 예측, Bayesian Optimization 기반 합성 조건 추천 등 9종의 모델을
+             모델 카드 형식으로 제공. 5종은 별도 설치 없이 브라우저에서 바로 실행됩니다.</p>
+          <span class="go">모델 카탈로그 →</span>
         </div>
-      </div>
+      </a>
+    </section>
+
+    <div class="section-head">
+      <h2>인터랙티브 모델 데모</h2>
+      <a class="more" href="ml.html">전체 9종 보기 →</a>
+    </div>
+    <section class="model-grid" aria-label="추천 모델">
+      <a class="model-card" href="model-bo.html">
+        <div class="top">
+          <h3>Bayesian Optimization 기반 NCM811 합성 조건 추천</h3>
+          <span class="badge external">DEMO</span>
+        </div>
+        <p class="desc">Random Forest surrogate가 지정한 탐색 범위에서 예측 방전 용량 상위 3개 합성 조건을 제안합니다.</p>
+        <div class="tags"><span class="tag teal">설계 최적화</span><span class="tag">RF Surrogate</span><span class="tag">HF Space</span></div>
+        <span class="cta">데모 실행 →</span>
+      </a>
+      <a class="model-card" href="model-curr-life.html">
+        <div class="top">
+          <h3>전류 변수 사이클 수명 예측</h3>
+          <span class="badge live">LIVE</span>
+        </div>
+        <p class="desc">CNN-LSTM과 LightGBM 앙상블로 충·방전 프로토콜에 따른 수명 곡선을 롤아웃 예측합니다.</p>
+        <div class="tags"><span class="tag teal">수명 예측</span><span class="tag">CNN-LSTM + LGBM</span><span class="tag">ONNX</span></div>
+        <span class="cta">데모 실행 →</span>
+      </a>
+      <a class="model-card" href="model-shelf.html">
+        <div class="top">
+          <h3>충전도 기반 보관 수명 특성 예측</h3>
+          <span class="badge live">LIVE</span>
+        </div>
+        <p class="desc">경과 시간별 용량 측정값으로부터 이후 보관 구간의 용량과 보존율을 재귀적으로 예측합니다.</p>
+        <div class="tags"><span class="tag teal">수명 예측</span><span class="tag">시계열 롤아웃</span><span class="tag">ONNX</span></div>
+        <span class="cta">데모 실행 →</span>
+      </a>
     </section>
   </main>
-
-  <footer>
-    <div class="container" style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap">
-      <div class="brand"><span class="mark" aria-hidden="true"></span> <strong>STEAM Project Hub</strong></div>
-      <div>© <span id="y"></span> STEAM Project Hub</div>
-    </div>
-  </footer>
-
-  <!-- ML Overlay (in-page) -->
-  <div class="ml-overlay" id="mlOverlay" role="dialog" aria-modal="true" aria-labelledby="mlMenuTitle" hidden>
-    <div class="ml-bg" id="mlBg" aria-hidden="true"></div>
-    <div class="ml-panel">
-      <header>
-        <h2 id="mlMenuTitle">머신러닝 모델</h2>
-        <button class="ml-close" id="mlClose" aria-label="닫기">닫기</button>
-      </header>
-      <div class="ml-list">
-        <button class="ml-item" data-id="bo">Bayesian optimization 기반 목표 용량 배터리 설계 지침 제안 모델</button>
-        <button class="ml-item" data-id="temp-life">온도 변수 사이클 수명 시험 모델</button>
-        <button class="ml-item" data-id="curr-life">전류 변수 사이클 수명 시험 모델</button>
-        <button class="ml-item" data-id="soc-cycle">충전도 기반 사이클 수명 시험 모델</button>
-        <button class="ml-item" data-id="shelf">충전도 기반 보관 수명 특성 모델</button>
-        <button class="ml-item" data-id="sem-img">SEM 이미지 기반 양극재 열화 상태 예측 및 정량화 모델</button>
-        <button class="ml-item" data-id="tem-img">TEM 이미지 기반 양극 열화 상태 예측 모델</button>
-        <button class="ml-item" data-id="eis-predict">EIS 평가 기반 배터리 성능 변화 조기예측 모델</button>
-        <button class="ml-item" data-id="llmmd-video">LLM 기반 MD 시뮬레이션을 통한 전해질 물성 자동 예측 모델 (영상)</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 공통 헬퍼: IndexedDB + 압축 저장 ===== -->
-  <script>
-  (()=>{
-    const DB_NAME='steam-previews', STORE='images';
-    const CFG={MAX_W:1280, MAX_H:720, QUALITY:0.74};
-    function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'key'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-    function tx(db,mode='readonly'){return db.transaction(STORE,mode).objectStore(STORE)}
-    async function putImage(key,blob){const db=await openDB();await new Promise((res,rej)=>{const r=tx(db,'readwrite').put({key,blob,mime:blob.type,t:Date.now()});r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
-    async function getImage(key){const db=await openDB();return await new Promise((res,rej)=>{const r=tx(db).get(key);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error)})}
-    async function delImage(key){const db=await openDB();await new Promise((res,rej)=>{const r=tx(db,'readwrite').delete(key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
-    function imgFromBlob(blob){const url=URL.createObjectURL(blob);const img=new Image();img.decoding='async';return new Promise((res,rej)=>{img.onload=()=>res({img,url});img.onerror=rej;img.src=url})}
-    async function compress(file,{maxW=CFG.MAX_W,maxH=CFG.MAX_H,quality=CFG.QUALITY}={}){try{if(file.type.includes('svg'))return file;if(file.size<=250_000)return file;const {img,url}=await imgFromBlob(file);const w=img.naturalWidth,h=img.naturalHeight;const scale=Math.min(maxW/w,maxH/h,1);const tw=Math.max(1,Math.round(w*scale));const th=Math.max(1,Math.round(h*scale));const c=document.createElement('canvas');c.width=tw;c.height=th;const ctx=c.getContext('2d');ctx.drawImage(img,0,0,tw,th);URL.revokeObjectURL(url);const mime='image/jpeg';const blob=await new Promise(res=>c.toBlob(res,mime,quality));return blob||file}catch(e){console.warn('compress failed',e);return file}}
-    async function loadPreview(key){const rec=await getImage(key);return rec?{url:URL.createObjectURL(rec.blob),mime:rec.mime}:null}
-    async function persistPreview({inputId,imgId,key,placeholderId}){const input=document.getElementById(inputId);const img=document.getElementById(imgId);const ph=placeholderId?document.getElementById(placeholderId):null;try{const got=await loadPreview(key);if(got){img.src=got.url;img.alt=img.alt||'saved preview';if(ph) ph.hidden=true}}catch(e){console.warn('loadPreview',e)}input?.addEventListener('change',async()=>{const file=input.files&&input.files[0];if(!file)return;try{const small=await compress(file);await putImage(key,small);const old=img.src;img.src=URL.createObjectURL(small);if(old?.startsWith('blob:')) URL.revokeObjectURL(old);img.alt=file.name;if(ph) ph.hidden=true}catch(err){console.error(err);alert('이미지 저장 중 오류가 발생했어요. 크기를 더 줄여 다시 시도해 주세요.')}})}
-    async function getSavedPreviewURL(key){const rec=await getImage(key);return rec?URL.createObjectURL(rec.blob):null}
-    window.persistPreview=persistPreview; window.getSavedPreviewURL=getSavedPreviewURL; window.deleteSavedPreview=delImage;
-  })();
-  </script>
-
-  <!-- ===== 페이지 스크립트 ===== -->
-  <script>
-    // 전역 플래그: ML 오버레이 열림 여부
-    window.__overlayOpen = false;
-
-    // Footer year
-    document.getElementById('y').textContent = new Date().getFullYear();
-
-    // 업로더 → IndexedDB 영구 저장/복원
-    persistPreview({ inputId:'dbFile', imgId:'dbPreview', key:'home:dbPreview', placeholderId:'dbPH' });
-    persistPreview({ inputId:'mlFile', imgId:'mlPreview', key:'home:mlPreview', placeholderId:'mlPH' });
-
-    // 블록 클릭/키보드 접근성 처리 (업로더 클릭은 네비게이션 막기)
-    function makeNavigable(block){
-      if(block.id === 'block-ml'){
-        block.addEventListener('click', (e)=>{
-          if(e.target.closest('.uploader')) return;
-          openMLOutline();
-        });
-        block.addEventListener('keydown', (e)=>{
-          if(e.target.closest('.uploader')) return;
-          if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openMLOutline(); }
-        });
-        return;
-      }
-      const target = block.dataset.target;
-      block.addEventListener('click', (e)=>{
-        if(e.target.closest('.uploader')) return;
-        if(target) window.location.href = target;
-      });
-      block.addEventListener('keydown', (e)=>{
-        if(e.target.closest('.uploader')) return;
-        if(e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          if(target) window.location.href = target;
-        }
-      });
-    }
-    makeNavigable(document.getElementById('block-db'));
-    makeNavigable(document.getElementById('block-ml'));
-
-    // ====== JS 모드: 절대 배치 확장 + 화면 비율 자동 맞춤 ======
-    (function(){
-      const grid = document.querySelector('.grid2');
-      const db = document.getElementById('block-db');
-      const ml = document.getElementById('block-ml');
-      const blocks = [db, ml];
-
-      grid.classList.add('jsmode');
-
-      function fitVars(el){
-        const gridRect = grid.getBoundingClientRect();
-        const rect = el.getBoundingClientRect();
-        const gap = 16;
-        const topRel = Math.max(0, Math.round(rect.top - gridRect.top));
-        const avail = Math.max(360, Math.round(window.innerHeight - rect.top - gap));
-        grid.style.setProperty('--snap-top', topRel + 'px');
-        grid.style.setProperty('--expanded-h', avail + 'px');
-      }
-      function expand(el){
-        fitVars(el);
-        grid.classList.add('expanded');
-        blocks.forEach(b=>{
-          b.classList.toggle('is-zoom', b===el);
-          b.classList.toggle('is-dim', b!==el);
-        });
-      }
-      function collapse(){
-        if(window.__overlayOpen) return;
-        grid.classList.remove('expanded');
-        blocks.forEach(b=> b.classList.remove('is-zoom','is-dim'));
-      }
-
-      blocks.forEach(b=>{
-        b.addEventListener('mouseenter', ()=>expand(b));
-        b.addEventListener('focusin', ()=>expand(b));
-      });
-      grid.addEventListener('mouseleave', collapse);
-      grid.addEventListener('focusout', (e)=>{ if(!grid.contains(e.relatedTarget)) collapse(); });
-
-      window.addEventListener('resize', ()=>{
-        const zoom = blocks.find(b=>b.classList.contains('is-zoom'));
-        if(zoom) fitVars(zoom);
-      });
-
-      window.__ensureMLExpanded = ()=> expand(ml);
-      window.__collapseGrid = ()=> collapse();
-    })();
-
-    // ===== ML 오버레이 로직 =====
-    const mlOverlay = document.getElementById('mlOverlay');
-    const mlClose   = document.getElementById('mlClose');
-    const mlBg      = document.getElementById('mlBg');
-
-    function openMLOutline(){
-      window.__overlayOpen = true;
-      if(window.__ensureMLExpanded) window.__ensureMLExpanded();
-      // 배경 이미지를 현재 ML 미리보기로 설정 (이미 persist로 로드됨)
-      const src = document.getElementById('mlPreview')?.src;
-      if(src) mlBg.style.backgroundImage = `url('${src}')`;
-
-      mlOverlay.hidden = false;
-      requestAnimationFrame(()=> mlOverlay.classList.add('open'));
-      document.addEventListener('keydown', onEscClose);
-    }
-    function closeMLOutline(){
-      mlOverlay.classList.remove('open');
-      mlOverlay.addEventListener('transitionend', ()=>{ mlOverlay.hidden = true; }, { once:true });
-      document.removeEventListener('keydown', onEscClose);
-      window.__overlayOpen = false;
-      if(window.__collapseGrid) window.__collapseGrid();
-    }
-    function onEscClose(e){ if(e.key === 'Escape') closeMLOutline(); }
-
-    mlOverlay.addEventListener('click', (e)=>{ if(e.target === mlOverlay) closeMLOutline(); });
-    mlClose.addEventListener('click', closeMLOutline);
-
-    const MODEL_ROUTES = {
-      bo:            'model-bo.html',
-      'temp-life':   'model-temp-life.html',
-      'curr-life':   'model-curr-life.html',
-      'soc-cycle':    'model-soc-cycle.html',
-      'shelf':   'model-shelf.html',
-      'sem-img':     'model-sem-img.html',
-      'tem-img':     'model-tem-img.html',
-      'eis-predict': 'model-eis-predict.html',
-      'llmmd-video': 'model-llmmd-video.html'
-    };
-
-    document.querySelectorAll('.ml-item').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const id = btn.dataset.id;
-        const route = MODEL_ROUTES[id];
-        if(route){
-          window.location.href = route;
-        }
-      });
-    });
-  </script>
 </body>
 </html>

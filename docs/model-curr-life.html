@@ -5,105 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>전류 변수 사이클 수명 예측 — STEAM Project Hub</title>
   <meta name="description" content="상수 프로토콜(C1, %, C2)과 증가 Cycle, 초기 용량 C₀를 바탕으로 CNN-LSTM + LGBM 조합으로 수명 곡선을 롤아웃 예측" />
-  <!-- 라이트 톤 상단바 고정 -->
-  <meta name="theme-color" content="#f7f9fc" />
-  <style>
-    :root{
-      /* 라이트 팔레트 고정 (model-temp-life와 동일) */
-      --bg:#f7f9fc; --fg:#0d1117; --muted:#536075; --card:#ffffff; --border:#e6eaf1;
-      --accent:#3b82f6; --accent2:#14b8a6; --shadow:0 10px 30px rgba(0,0,0,.10); --r:18px;
-      --ease:cubic-bezier(.16,1,.3,1);
-      color-scheme: light; /* 브라우저 위젯/폼/스크롤바도 라이트 */
-    }
-
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",Arial}
-    a{color:inherit; text-decoration:none}
-    .container{width:min(100%,1100px); margin:0 auto; padding:24px 20px}
-
-    /* 상단바/브레드크럼/히어로 (temp-life와 동일 레이아웃) */
-    header{position:sticky; top:0; z-index:5; backdrop-filter:saturate(120%) blur(8px);
-      background:color-mix(in srgb,var(--bg),transparent 20%); border-bottom:1px solid var(--border)}
-    .nav{display:flex; align-items:center; justify-content:space-between; height:64px}
-    .brand{display:flex; align-items:center; gap:10px; font-weight:800}
-    .mark{width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent2))}
-    .crumbs{display:flex; gap:8px; align-items:center; font-size:14px; color:var(--muted)}
-    .crumbs a{color:var(--muted)}
-    .hero{padding:26px 0}
-    .hero h1{margin:0 0 8px; font-size:clamp(22px,4.2vw,34px); line-height:1.15}
-    .hero p{margin:0; color:var(--muted)}
-
-    /* 그리드/카드 */
-    .grid{display:grid; gap:18px; grid-template-columns:1fr; align-items:start; margin-top:14px}
-    @media (min-width:980px){ .grid{ grid-template-columns: 1.05fr .95fr; } }
-
-    .card{background:var(--card); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
-    .card header{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border)}
-    .card header h2{margin:0; font-size:18px}
-    .card .body{padding:16px}
-
-    /* 폼/버튼 (temp-life 스타일) */
-    .row{display:grid; gap:12px; grid-template-columns: 1fr}
-    @media (min-width:720px){ .row.cols-3{ grid-template-columns: 1fr 1fr 1fr; } .row.cols-2{ grid-template-columns: 1 fr 1fr; } }
-
-    .label{font-size:13px; color:var(--muted); margin-bottom:6px}
-    .field{position:relative}
-    .field input[type="number"],
-    .field select,
-    .field button{
-      width:100%; padding:12px 14px; border-radius:12px; background:color-mix(in srgb,var(--card),transparent 8%);
-      border:1px solid var(--border); color:var(--fg); outline:none;
-      transition: border-color .2s var(--ease), box-shadow .2s var(--ease);
-    }
-    input::placeholder{color:color-mix(in srgb,var(--muted),transparent 30%)}
-    input:focus, select:focus{border-color:color-mix(in srgb,var(--accent),transparent 40%); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent),transparent 85%)}
-
-    .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
-    .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); cursor:pointer}
-    .btn.primary{background:linear-gradient(180deg,var(--accent),#6b86ff); color:#fff; border-color:transparent}
-    .btn.ghost{background:transparent; color:var(--fg)}
-    .hint{font-size:12px; color:var(--muted)}
-    .warn{font-size:12px; color:#d92b2b; min-height:1.2em}
-
-    /* 차트/통계/테이블 (temp-life 스타일) */
-    .chart-wrap{border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px}
-    canvas{display:block; width:100%; height:260px}
-
-    .stats{display:grid; gap:10px; grid-template-columns:1fr; margin-bottom:10px}
-    @media (min-width:720px){ .stats{ grid-template-columns: repeat(3, 1fr); } }
-    .stat{border:1px solid var(--border); border-radius:12px; padding:12px}
-    .stat .k{font-size:12px; color:var(--muted)}
-    .stat .v{font-size:18px; font-weight:700}
-
-    table{width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--border); border-radius:12px; overflow:hidden}
-    thead th{font-size:12px; color:var(--muted); text-align:left; padding:10px}
-    tbody td{padding:10px; border-top:1px solid var(--border)}
-    tbody tr:hover{background:color-mix(in srgb,var(--card),transparent 12%)}
+  <meta name="theme-color" content="#f6f8fb" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="assets/steam.css" />
+  <script defer src="assets/steam-ui.js"></script>
+  <style data-page>
+    canvas{height:260px}
   </style>
 </head>
-<body>
-  <header>
-    <div class="container nav">
-      <div class="brand"><span class="mark" aria-hidden="true"></span> STEAM Project Hub</div>
-      <nav aria-label="보조">
-        <a href="index.html" style="font-size:14px; color:var(--muted)">← 홈으로</a>
-      </nav>
-    </div>
-  </header>
-
+<body data-nav="models">
   <main class="container">
-    <div class="crumbs"><a href="index.html">홈</a> › <span>머신러닝</span> › <span>전류 변수 사이클 수명 예측</span></div>
+    <nav class="crumbs" aria-label="breadcrumb">
+      <a href="index.html">홈</a><span class="sep">›</span>
+      <a href="ml.html">모델</a><span class="sep">›</span>
+      <span class="here">전류 변수 사이클 수명 예측</span>
+    </nav>
 
-    <section class="hero">
-      <h1>전류 변수 사이클 수명 예측 모델</h1>
-      <p class="muted">C1, Percentage(%), C2는 고정, Cycle은 시작값부터 1씩 증가한다고 가정. 초기 용량 C₀를 기준으로 예측 곡선을 앵커링(1점/2점)해 롤아웃.</p>
+    <section class="page-hero">
+      <div class="kicker">Machine Learning Model</div>
+      <h1>전류 변수 사이클 수명 예측 모델 <span class="badge live" style="vertical-align:middle">LIVE</span></h1>
+      <p class="lead">C1, Percentage(%), C2는 고정, Cycle은 시작값부터 1씩 증가한다고 가정합니다. LightGBM 4종이 특성 시퀀스를 생성하고 CNN-LSTM이 수명 곡선을 롤아웃 예측하며, 초기 용량 C₀ 기준으로 앵커링(1점/2점)합니다.</p>
     </section>
 
-    <section class="grid">
+    <section class="spec-strip" aria-label="모델 정보">
+      <div class="item"><div class="k">모델 유형</div><div class="v">하이브리드 (CNN-LSTM + LightGBM ×4)</div></div>
+      <div class="item"><div class="k">입력</div><div class="v">충·방전 프로토콜 C1 · % · C2, 초기 용량 C₀</div></div>
+      <div class="item"><div class="k">출력</div><div class="v">사이클별 용량 수명 곡선 (EOL 조기 종료)</div></div>
+      <div class="item"><div class="k">런타임</div><div class="v">ONNX Runtime Web · 브라우저 내 추론</div></div>
+    </section>
+
+    <section class="demo-grid">
       <!-- 입력 카드 -->
       <article class="card">
-        <header><h2>입력</h2></header>
+        <header>
+          <h2>입력</h2>
+          <button class="btn sm" id="demoBtn" type="button">예시 입력 채우기</button>
+        </header>
         <div class="body">
           <div class="row cols-3">
             <div class="field">
@@ -120,7 +57,7 @@
             </div>
           </div>
 
-          <div class="row cols-3">
+          <div class="row cols-3" style="margin-top:8px">
             <div class="field">
               <div class="label">시작 Cycle</div>
               <input id="CY0" type="number" step="1" value="1" />
@@ -135,7 +72,7 @@
             </div>
           </div>
 
-          <div class="row cols-3">
+          <div class="row cols-3" style="margin-top:8px">
             <div class="field">
               <div class="label">초기 방전 용량 C₀ (Ah)</div>
               <input id="C0" type="number" step="any" placeholder="예: 2.30" />
@@ -155,8 +92,8 @@
 
           <div class="actions">
             <button class="btn primary" id="runBtn" type="button">실행</button>
-            <button class="btn" id="demoBtn" type="button">데모 채우기</button>
-            <button class="btn" id="clearBtn" type="button">초기화</button>
+            <button class="btn ghost" id="clearBtn" type="button">초기화</button>
+            <span class="hint">최초 실행 시 모델 로딩에 수 초가 걸릴 수 있습니다.</span>
           </div>
           <div id="warn" class="warn"></div>
         </div>
@@ -168,7 +105,6 @@
         <div class="body">
           <div class="chart-wrap"><canvas id="chart" width="800" height="260" aria-label="용량 예측 차트"></canvas></div>
 
-          <!-- 간단 요약을 stat 카드로 -->
           <div class="stats">
             <div class="stat"><div class="k">첫 예측 (Ah)</div><div class="v" id="statFirst">—</div></div>
             <div class="stat"><div class="k">마지막 (Ah)</div><div class="v" id="statLast">—</div></div>
@@ -184,11 +120,11 @@
     </section>
   </main>
 
-  <!-- onnxruntime-web (CDN 그대로 유지) -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+  <!-- onnxruntime-web -->
+  <script src="vendor/ort.min.js"></script>
 
   <script>
-  /* ====== 경로: HTML 위치에 따라 수정하세요 ====== */
+  /* ====== 모델 경로 ====== */
   const PATHS = {
     LGBM_V : "models/curr-life/lgbm_v.onnx",
     LGBM_IR: "models/curr-life/lgbm_ir.onnx",
@@ -196,7 +132,7 @@
     LGBM_P8: "models/curr-life/lgbm_p8.onnx",
     CNN    : "models/curr-life/cnn_lstm.onnx",
   };
-  /* ============================================= */
+  /* ====================== */
 
   const REQ_SEQ = 100; // CNN-LSTM 학습 시퀀스 길이 (고정)
   const $ = id => document.getElementById(id);
@@ -261,8 +197,8 @@
     if(!series || !series.length) return;
 
     const styles = getComputedStyle(document.body);
-    const colBorder = (styles.getPropertyValue('--border') || '#e6eaf1').trim();
-    const colText   = (styles.getPropertyValue('--muted')  || '#536075').trim();
+    const colBorder = (styles.getPropertyValue('--border') || '#e4e9f0').trim();
+    const colText   = (styles.getPropertyValue('--muted')  || '#5b6474').trim();
 
     // 폰트 설정(측정 전에 세팅)
     ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial';
@@ -337,7 +273,7 @@
     }
 
     // 데이터 선
-    ctx.strokeStyle = '#3b82f6';
+    ctx.strokeStyle = '#2563eb';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(X(xMin), Y(series[0]));
@@ -541,8 +477,6 @@
   });
   $("clearBtn").addEventListener("click", ()=>{
     for(const id of ["C1","PCT","C2","CY0","SEQ","STEPS","C0"]) $(id).value="";
-    // anchor/EOL은 유지(필요 시 아래 두 줄 주석 해제)
-    // $("anchor").value="first"; $("EOL").value="0.80";
 
     draw([], { xLabel: 'Cycle', yLabel: 'Capacity (Ah)' });
     const tb = q('#tbl tbody'); tb.innerHTML = '';
