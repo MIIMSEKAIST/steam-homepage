@@ -32,8 +32,8 @@
 
     <div class="toolbar" role="group" aria-label="모델 필터">
       <div class="chips" id="statusChips">
-        <button class="chip" data-filter="all" aria-pressed="true">전체 <span class="n">9</span></button>
-        <button class="chip" data-filter="demo" aria-pressed="false">인터랙티브 데모 <span class="n">5</span></button>
+        <button class="chip" data-filter="all" aria-pressed="true">전체 <span class="n">10</span></button>
+        <button class="chip" data-filter="demo" aria-pressed="false">인터랙티브 데모 <span class="n">6</span></button>
         <button class="chip" data-filter="soon" aria-pressed="false">공개 예정 <span class="n">4</span></button>
       </div>
       <input class="search" id="searchBox" type="text" placeholder="모델 검색 (예: 수명, SEM, EIS…)" aria-label="모델 검색" />
@@ -46,10 +46,16 @@
   <script>
     const MODELS = [
       {
-        id:'bo', href:'model-bo.html', status:'demo', badge:'external', badgeLabel:'DEMO',
+        id:'bo', href:'model-bo.html', status:'demo', badge:'live', badgeLabel:'LIVE',
         title:'Bayesian Optimization 기반 NCM811 합성 조건 추천',
         desc:'문헌·실험 데이터로 학습한 Random Forest surrogate가 사용자가 지정한 합성 조건 탐색 범위에서 예측 방전 용량 상위 3개 조건을 제안합니다.',
-        tags:['설계 최적화','RF Surrogate','Hugging Face Space']
+        tags:['설계 최적화','RF Surrogate','FastAPI · REST API']
+      },
+      {
+        id:'perf', href:'model-perf.html', status:'demo', badge:'live', badgeLabel:'LIVE',
+        title:'셀 설계·공정 변수 기반 배터리 성능 예측 (프로토타입)',
+        desc:'전극 로딩·두께·공극률·입자 크기와 캘린더링·코팅·건조·화성 조건을 입력하면 C-rate별 방전 용량, 초기 손실, 율속, 사이클 수명을 예측합니다. 공개 데이터 + PyBaMM Li-metal 시뮬레이션으로 학습한 프로토타입.',
+        tags:['설계 최적화','RF multi-target','FastAPI · REST API']
       },
       {
         id:'temp-life', href:'model-temp-life.html', status:'demo', badge:'live', badgeLabel:'LIVE',

@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>셀 설계·공정 변수 기반 배터리 성능 예측 — STEAM Project Hub</title>
+  <meta name="description" content="전극 로딩·두께·공극률·입자 크기, 캘린더링·코팅·건조·화성 조건, 평가 조건을 입력하면 C-rate별 방전 용량, 초기 사이클 손실, 율속 특성, 사이클 수명을 예측하는 프로토타입 모델 (STEAM 통합 백엔드 API)" />
+  <meta name="theme-color" content="#f6f8fb" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="assets/steam.css" />
+  <script src="assets/steam-config.js"></script>
+  <script defer src="assets/steam-ui.js"></script>
+  <style data-page>
+    .perf-grid{display:grid; gap:18px; grid-template-columns:1fr; align-items:start}
+    @media (min-width:980px){ .perf-grid{grid-template-columns:1fr 1.25fr} }
+    .sec-title{font-size:14px; font-weight:800; letter-spacing:-.01em; margin:0 0 10px}
+    .presets{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px}
+    .presets .btn.on{background:var(--accent-weak); border-color:var(--accent); color:var(--accent)}
+    .presets .btn .sim{font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:999px; background:#fef3c7; color:#92400e; margin-left:6px}
+    details.grp{border:1px solid var(--border); border-radius:var(--r-sm); padding:8px 12px; margin-bottom:10px; background:#fbfcfe}
+    details.grp summary{cursor:pointer; font-size:13px; font-weight:700; color:var(--fg); list-style:none; display:flex; justify-content:space-between; align-items:center}
+    details.grp summary small{color:var(--faint); font-weight:500}
+    details.grp summary::-webkit-details-marker{display:none}
+    .fgrid{display:grid; gap:8px 12px; grid-template-columns:1fr 1fr; padding-top:8px}
+    @media (max-width:560px){ .fgrid{grid-template-columns:1fr} }
+    .fgrid .label{margin-bottom:3px; font-size:12px}
+    .fgrid .label small{color:var(--faint); font-weight:500; margin-left:4px}
+    .fgrid input, .fgrid select{padding:7px 10px; font-size:13px}
+    .chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;
+          background:var(--accent-weak); color:var(--accent); border:1px solid #c7d9fb; white-space:nowrap}
+    .chip.ok{background:var(--ok-weak); color:var(--ok); border-color:#bbe7c8}
+    .chip.bad{background:#fef2f2; color:var(--danger); border-color:#fecaca}
+    .tiles{display:grid; gap:10px; grid-template-columns:1fr 1fr; margin-bottom:12px}
+    @media (min-width:720px){ .tiles{grid-template-columns:repeat(3,1fr)} }
+    .tile{border:1px solid var(--border); border-radius:var(--r-sm); padding:11px 13px; background:#fbfcfe}
+    .tile .k{font-size:12px; color:var(--muted); line-height:1.3}
+    .tile .v{font-size:19px; font-weight:800; letter-spacing:-.01em; margin-top:3px; font-variant-numeric:tabular-nums}
+    .tile .v small{font-size:12px; font-weight:600; color:var(--faint); margin-left:3px}
+    .tile .s{font-size:11.5px; color:var(--faint); margin-top:2px}
+    .tile.extrap{border-color:#fde68a; background:var(--warn-weak)}
+    .warnbox{display:none; margin:0 0 12px; padding:10px 12px; border:1px solid #fde68a; background:var(--warn-weak); border-radius:var(--r-sm); font-size:12.5px; color:#92400e; line-height:1.5}
+    .warnbox.show{display:block}
+    .warnbox div::before{content:"⚠ "}
+    .meta-note{padding:14px 18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; line-height:1.6}
+    .meta-note strong{color:var(--fg)}
+    .api-line{font-size:12.5px; color:var(--faint); margin-top:8px}
+    .api-line code{background:#f2f4f8; padding:1px 6px; border-radius:6px}
+    .fallback{display:none; margin-top:10px; padding:12px 14px; border:1px solid #fde68a; background:var(--warn-weak); border-radius:var(--r-sm); font-size:13px}
+    .fallback.show{display:block}
+    .placeholder{color:var(--faint); font-size:13px; padding:28px 0; text-align:center}
+    .curve-table{width:100%; font-size:12px; margin-top:6px}
+    .curve-table td,.curve-table th{padding:4px 6px; text-align:right; font-variant-numeric:tabular-nums}
+    .curve-table th:first-child,.curve-table td:first-child{text-align:left}
+    /* ?compact=1 — presentation / screenshot mode: demo card only */
+    body.compact .crumbs, body.compact .page-hero, body.compact .spec-strip, body.compact .curve-table, body.compact .meta-note{display:none}
+    body.compact .card{margin-top:4px !important}
+    body.compact .tiles{grid-template-columns:repeat(4,1fr); gap:8px}
+    body.compact .tile{padding:8px 10px}
+    body.compact .tile .v{font-size:17px}
+    body.compact .tile .s{display:none}
+    body.compact #curve{height:185px}
+  </style>
+</head>
+<body data-nav="models">
+  <main class="container">
+    <nav class="crumbs" aria-label="breadcrumb">
+      <a href="index.html">홈</a><span class="sep">›</span>
+      <a href="ml.html">모델</a><span class="sep">›</span>
+      <span class="here">셀 설계·공정 변수 기반 배터리 성능 예측</span>
+    </nav>
+
+    <section class="page-hero">
+      <div class="kicker">Machine Learning Model · Prototype</div>
+      <h1>셀 설계·공정 변수 기반 배터리 성능 예측 <span class="badge live" style="vertical-align:middle">LIVE · API</span></h1>
+      <p class="lead">전극 로딩·두께·공극률·입자 크기와 캘린더링·코팅·건조·화성 조건, 평가 조건을 입력하면
+        <strong>C-rate별 방전 용량, 초기 사이클 손실, 율속 특성, 사이클 수명</strong>을 예측합니다.
+        공개 실험 데이터(WMG 캘린더링·코팅 DoE, U-Mich formation)와 PyBaMM Li-metal 하프셀 시뮬레이션으로 학습한 프로토타입이며,
+        1단계 상용셀 화성 DB·차세대 파우치 데이터 수신 후 같은 스키마로 재학습(v2)됩니다.</p>
+    </section>
+
+    <section class="spec-strip" aria-label="모델 정보">
+      <div class="item"><div class="k">모델 유형</div><div class="v">Random Forest multi-target (타깃별 500 trees, ±σ = 트리 분산)</div></div>
+      <div class="item"><div class="k">입력</div><div class="v">범주 4 (양극·음극·셀 형태·화성) + 설계·공정·화성·평가 조건 수치 (결측 허용)</div></div>
+      <div class="item"><div class="k">출력</div><div class="v">용량 vs C-rate 곡선, 초기 손실, 율속(5C/0.2C), 수명(80 % 도달 cycle, 300 cycle 유지율)</div></div>
+      <div class="item"><div class="k">런타임</div><div class="v">STEAM 통합 백엔드 (FastAPI · 버전 레지스트리 · 핫 리로드)</div></div>
+    </section>
+
+    <article class="card" style="margin-top:16px">
+      <header>
+        <h2>인터랙티브 데모</h2>
+        <span id="modelChip" class="chip">모델 정보 불러오는 중…</span>
+      </header>
+      <div class="body">
+        <div class="perf-grid">
+          <div>
+            <h3 class="sec-title">① 프리셋 (학습 데이터 중앙값)</h3>
+            <div class="presets" id="presets"></div>
+            <h3 class="sec-title">② 설계·공정·평가 조건</h3>
+            <div id="catBox" class="fgrid" style="padding-top:0; margin-bottom:10px"></div>
+            <div id="numBox"></div>
+            <div class="actions">
+              <button class="btn primary" id="runBtn" disabled>성능 예측 실행</button>
+              <button class="btn ghost" id="clearBtn">수치 비우기</button>
+              <span class="hint" id="elapsed"></span>
+            </div>
+            <div id="warn" class="warn"></div>
+            <div id="fallback" class="fallback">
+              API 서버에 연결할 수 없습니다. 서버가 잠시 내려갔거나 깨어나는 중일 수 있으니 잠시 후 새로고침해 주세요.
+              로컬 실행은 <code class="mono">uvicorn app.main:app --port 8000</code> 후 <code class="mono">http://127.0.0.1:8000/model-perf.html</code>.
+            </div>
+          </div>
+          <div>
+            <h3 class="sec-title">③ 예측 결과</h3>
+            <div id="warnBox" class="warnbox"></div>
+            <div id="tiles" class="tiles"></div>
+            <div id="resultPlaceholder" class="placeholder">프리셋을 고르거나 값을 입력한 뒤 <strong>성능 예측 실행</strong>을 누르세요.</div>
+            <div class="chart-wrap" id="chartWrap" hidden>
+              <div class="label" style="margin-bottom:4px">예측 방전 용량 vs C-rate (mAh/g, 활물질 기준)</div>
+              <canvas id="curve" width="900" height="300" aria-label="rate capability curve"></canvas>
+              <div class="legend"><span><span class="dot" style="background:#2563eb"></span>예측 평균</span><span><span class="dot" style="background:#bfdbfe"></span>±1σ (트리 분산)</span><span><span class="dot" style="background:#dc2626"></span>입력 C-rate</span></div>
+              <table class="curve-table" id="curveTable"></table>
+            </div>
+            <div class="api-line" id="apiLine"></div>
+          </div>
+        </div>
+      </div>
+      <div class="meta-note" id="metaNote">
+        <strong>학습 데이터 (공개).</strong>
+        <span id="srcLine">모델 정보를 불러오면 표시됩니다.</span>
+        <br /><br />
+        <strong>평가 지표.</strong> 전극 조건·셀·설계 단위 GroupKFold 교차검증으로 MAPE·MAE·R²(스칼라/수명), 셀별 율속 곡선 RMSE(mAh/g)를 산출합니다
+        (계획서 핵심 보완 계획 (1): 스칼라·수명 = MAPE + MAE, 곡선 = RMSE, 조건 템플릿 명시). 5–10C에서 용량이 0에 가까운 셀 때문에 전체 MAPE는 과대 평가되므로 ≤ 2C MAPE를 함께 봅니다.
+        <br /><br />
+        <strong>조건 템플릿.</strong> <span id="condLine"></span>
+        <br /><br />
+        <strong>한계.</strong> 소규모·이종 공개 데이터(3개 기관 + 1 시뮬레이션)로 학습했으며, 각 타깃은 해당 항목을 측정한 데이터 소스에서만 학습됩니다.
+        다른 셀 계열 입력은 외삽으로 표시됩니다. <em>Li-metal(sim)</em> 결과는 물리 시뮬레이션(DFN 하프셀) 기반이며 실측 검증 전입니다.
+        차세대 배터리 조립 규격 → 성능 예측(2단계 4차년도 계획)의 인터페이스·스키마·파이프라인 검증용 프로토타입입니다.
+      </div>
+    </article>
+  </main>
+
+  <script>
+    const API = (window.STEAM_API_BASE || "").replace(/\/$/, "");
+    const $ = (id) => document.getElementById(id);
+    if (new URLSearchParams(location.search).get("compact")) document.body.classList.add("compact");
+    let SCHEMA = null, ACTIVE_PRESET = null, LAST = null;
+    const GROUPS = [["design", "설계 변수"], ["process", "공정 변수 (캘린더링·코팅·건조)"], ["formation", "화성·BOL 진단"], ["assembly", "조립"], ["condition", "평가 조건"]];
+    const OPEN = new Set(["design", "process", "condition"]);
+    const fmt = (v, d = 2) => (v == null || !isFinite(v)) ? "–" : Number(v).toLocaleString("ko-KR", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+
+    function buildForm(s) {
+      const cat = $("catBox"); cat.innerHTML = "";
+      for (const c of s.categorical) {
+        const w = document.createElement("div");
+        w.innerHTML = `<div class="label">${c.label}<small>${c.name}</small></div>`;
+        const sel = document.createElement("select"); sel.id = "in_" + c.name;
+        for (const ch of c.choices) { const o = document.createElement("option"); o.value = ch; o.textContent = ch; sel.appendChild(o); }
+        w.appendChild(sel); cat.appendChild(w);
+      }
+      const nb = $("numBox"); nb.innerHTML = "";
+      for (const [g, title] of GROUPS) {
+        const items = s.numerical.filter(n => n.group === g);
+        if (!items.length) continue;
+        const d = document.createElement("details"); d.className = "grp"; d.open = OPEN.has(g);
+        d.innerHTML = `<summary>${title}<small>${items.length}개 · 비우면 결측(NaN)</small></summary><div class="fgrid"></div>`;
+        const grid = d.querySelector(".fgrid");
+        for (const n of items) {
+          const w = document.createElement("div");
+          w.innerHTML = `<div class="label">${n.label}${n.unit ? `<small>${n.unit}</small>` : ""}</div>
+            <input type="number" id="in_${n.name}" step="${n.step}" placeholder="${fmt(n.min, 3)} – ${fmt(n.max, 3)}" title="학습 범위 ${fmt(n.min, 3)} – ${fmt(n.max, 3)} ${n.unit}" />`;
+          grid.appendChild(w);
+        }
+        nb.appendChild(d);
+      }
+      const pb = $("presets"); pb.innerHTML = "";
+      for (const p of s.presets) {
+        const b = document.createElement("button"); b.className = "btn sm"; b.type = "button";
+        b.innerHTML = p.label + (p.id.startsWith("pybamm") ? `<span class="sim">SIM</span>` : "");
+        b.title = `${p.n_rows}개 학습 행의 대표값`;
+        b.addEventListener("click", () => applyPreset(p));
+        pb.appendChild(b);
+      }
+    }
+
+    function applyPreset(p) {
+      ACTIVE_PRESET = p.id;
+      for (const b of $("presets").children) b.classList.toggle("on", b.textContent.startsWith(p.label));
+      for (const c of SCHEMA.categorical) $("in_" + c.name).value = p.inputs[c.name] ?? c.choices[0];
+      for (const n of SCHEMA.numerical) { const el = $("in_" + n.name); el.value = (p.inputs[n.name] != null) ? p.inputs[n.name] : ""; }
+    }
+
+    function readForm() {
+      const inputs = {};
+      for (const c of SCHEMA.categorical) inputs[c.name] = $("in_" + c.name).value;
+      for (const n of SCHEMA.numerical) {
+        const raw = $("in_" + n.name).value;
+        if (raw === "") continue;
+        const v = Number(raw);
+        if (!Number.isFinite(v)) throw new Error(`${n.label}: 숫자를 입력하세요`);
+        inputs[n.name] = v;
+      }
+      return inputs;
+    }
+
+    function render(res) {
+      LAST = res;
+      $("resultPlaceholder").hidden = true;
+      const tiles = $("tiles"); tiles.innerHTML = "";
+      const order = ["cap_mAh_g", "rate_5C_over_0p2C_pct", "first_cycle_loss_pct", "asi_50soc_ohm_cm2", "retention_50cyc_pct", "cycles_to_80_pct", "retention_at_c300_pct"];
+      const names = Object.keys(res.predictions).sort((a, b) => (order.indexOf(a) + 99) % 99 - (order.indexOf(b) + 99) % 99);
+      for (const name of names) {
+        const p = res.predictions[name];
+        const extrap = res.warnings.some(w => w.startsWith(name + ":"));
+        const t = document.createElement("div"); t.className = "tile" + (extrap ? " extrap" : "");
+        const cr = (name === "cap_mAh_g" && res.inputs.c_rate != null) ? ` @ ${res.inputs.c_rate}C` : "";
+        t.innerHTML = `<div class="k">${p.label}${cr}</div><div class="v">${fmt(p.mean, name === "cycles_to_80_pct" ? 0 : 2)}<small>± ${fmt(p.std, 2)} ${p.unit}</small></div>
+          <div class="s">학습 ${p.n_train}행 · ${p.train_sources.join(", ")}${extrap ? " · 외삽" : ""}</div>`;
+        tiles.appendChild(t);
+      }
+      const wb = $("warnBox");
+      const nEx = Object.keys(res.predictions).filter(n => res.warnings.some(w => w.startsWith(n + ":"))).length;
+      wb.innerHTML = res.warnings.length ? `<details><summary style="cursor:pointer;font-weight:700">외삽 경고 ${res.warnings.length}건 — 타깃 ${nEx}개는 다른 셀 계열·범위에서 학습됨 (펼쳐서 상세 보기)</summary>${res.warnings.map(w => `<div>${w}</div>`).join("")}</details>` : "";
+      wb.classList.toggle("show", res.warnings.length > 0);
+      if (res.rate_curve && res.rate_curve.length) { $("chartWrap").hidden = false; drawCurve(res.rate_curve, res.inputs.c_rate, res.predictions.cap_mAh_g); }
+      else $("chartWrap").hidden = true;
+      $("apiLine").innerHTML = `<code>POST ${API || ""}/api/perf/predict</code> · 모델 ${res.model_id} ${res.version} · 서버 ${res.elapsed_ms} ms` + (ACTIVE_PRESET ? ` · 프리셋 ${ACTIVE_PRESET}` : "");
+    }
+
+    function drawCurve(curve, cIn, capIn) {
+      const cv = $("curve"), ctx = cv.getContext("2d");
+      const W = cv.width, H = cv.height, L = 58, R = 16, T = 14, B = 40;
+      ctx.clearRect(0, 0, W, H);
+      const xs = curve.map(p => Math.log10(p.c_rate));
+      const xmin = Math.min(...xs), xmax = Math.max(...xs);
+      const ymax = Math.max(10, ...curve.map(p => p.mean + p.std)) * 1.08, ymin = 0;
+      const X = x => L + (Math.log10(x) - xmin) / (xmax - xmin || 1) * (W - L - R);
+      const Y = y => T + (1 - (y - ymin) / (ymax - ymin)) * (H - T - B);
+      ctx.strokeStyle = "#e4e9f0"; ctx.lineWidth = 1; ctx.fillStyle = "#8a93a5"; ctx.font = "12px Pretendard, system-ui, sans-serif";
+      const yt = 5; for (let i = 0; i <= yt; i++) { const y = ymin + (ymax - ymin) * i / yt; ctx.beginPath(); ctx.moveTo(L, Y(y)); ctx.lineTo(W - R, Y(y)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(y.toFixed(0), L - 6, Y(y) + 4); }
+      ctx.textAlign = "center";
+      for (const p of curve) { ctx.beginPath(); ctx.moveTo(X(p.c_rate), T); ctx.lineTo(X(p.c_rate), H - B); ctx.stroke(); ctx.fillText(p.c_rate + "C", X(p.c_rate), H - B + 16); }
+      ctx.fillText("방전 C-rate (log)", (L + W - R) / 2, H - 6);
+      ctx.beginPath(); ctx.fillStyle = "#bfdbfe";
+      curve.forEach((p, i) => { const x = X(p.c_rate), y = Y(p.mean + p.std); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      [...curve].reverse().forEach(p => ctx.lineTo(X(p.c_rate), Y(Math.max(0, p.mean - p.std))));
+      ctx.closePath(); ctx.globalAlpha = .7; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2.2;
+      curve.forEach((p, i) => { const x = X(p.c_rate), y = Y(p.mean); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.stroke();
+      for (const p of curve) { ctx.beginPath(); ctx.fillStyle = "#2563eb"; ctx.arc(X(p.c_rate), Y(p.mean), 3.2, 0, Math.PI * 2); ctx.fill(); }
+      if (cIn != null && capIn && cIn >= curve[0].c_rate && cIn <= curve[curve.length - 1].c_rate) {
+        ctx.beginPath(); ctx.fillStyle = "#dc2626"; ctx.arc(X(cIn), Y(capIn.mean), 5, 0, Math.PI * 2); ctx.fill();
+      }
+      const tb = $("curveTable");
+      tb.innerHTML = `<tr><th>C-rate</th>${curve.map(p => `<th>${p.c_rate}C</th>`).join("")}</tr>
+        <tr><td>예측 (mAh/g)</td>${curve.map(p => `<td>${fmt(p.mean, 1)}</td>`).join("")}</tr>
+        <tr><td>±σ</td>${curve.map(p => `<td>${fmt(p.std, 1)}</td>`).join("")}</tr>`;
+    }
+
+    async function run() {
+      $("warn").textContent = ""; $("elapsed").textContent = "";
+      let inputs;
+      try { inputs = readForm(); } catch (e) { $("warn").textContent = e.message; return; }
+      $("runBtn").disabled = true; $("runBtn").textContent = "계산 중…";
+      const t0 = performance.now();
+      try {
+        const r = await fetch(API + "/api/perf/predict", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ inputs }) });
+        if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e.detail && (e.detail.errors || e.detail)) ? JSON.stringify(e.detail.errors || e.detail) : `HTTP ${r.status}`); }
+        render(await r.json());
+        $("elapsed").textContent = `왕복 ${Math.round(performance.now() - t0)} ms`;
+      } catch (e) {
+        $("warn").textContent = "요청 실패: " + e.message;
+        if (e instanceof TypeError) $("fallback").classList.add("show");
+      } finally {
+        $("runBtn").disabled = false; $("runBtn").textContent = "성능 예측 실행";
+      }
+    }
+
+    function describeSources(s) {
+      const src = Object.entries(s.sources || {}).map(([k, v]) => `<strong>${k}</strong> — ${v}`).join("<br />");
+      $("srcLine").innerHTML = src || "–";
+      const cond = Object.entries(s.condition_template || {}).map(([k, v]) => `<strong>${k}</strong>: ${v.cell}; ${Array.isArray(v.temperature_C) ? v.temperature_C.join("/") : v.temperature_C} °C; ${v.voltage_window_V.join("–")} V; ${v.protocol}`).join("<br />");
+      $("condLine").innerHTML = cond || "–";
+    }
+
+    let initTries = 0;
+    async function init() {
+      try {
+        const r = await fetch(API + "/api/perf/schema", { cache: "no-store" });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        SCHEMA = await r.json();
+        buildForm(SCHEMA); describeSources(SCHEMA);
+        const cap = (SCHEMA.targets.find(t => t.name === "cap_mAh_g") || {}).metrics || {};
+        $("modelChip").className = "chip ok";
+        $("modelChip").textContent = `모델 ${SCHEMA.version} · 학습 ${SCHEMA.n_train.wide}셀 / ${SCHEMA.n_train.long}행 · 타깃 ${SCHEMA.targets.length}개` + (cap.R2 != null ? ` · 용량 CV R² ${cap.R2}` : "") + (cap.MAPE_le2C != null ? ` · MAPE≤2C ${cap.MAPE_le2C}%` : "");
+        const q = new URLSearchParams(location.search);
+        const want = SCHEMA.presets.find(p => p.id === q.get("preset")) || SCHEMA.presets[0];
+        if (want) applyPreset(want);
+        $("runBtn").disabled = false;
+        if (q.get("autorun")) run();
+      } catch (e) {
+        // A sleeping (free-tier) API server wakes up in 20–60 s: keep retrying before giving up.
+        if (++initTries < 18) {
+          $("modelChip").className = "chip"; $("modelChip").textContent = `API 서버 연결 중… (${initTries * 5} s, 슬립 상태면 최대 1분)`;
+          setTimeout(init, 5000); return;
+        }
+        $("modelChip").className = "chip bad"; $("modelChip").textContent = "API 연결 실패";
+        $("fallback").classList.add("show");
+      }
+    }
+    $("runBtn").addEventListener("click", run);
+    $("clearBtn").addEventListener("click", () => { if (!SCHEMA) return; for (const n of SCHEMA.numerical) $("in_" + n.name).value = ""; ACTIVE_PRESET = null; for (const b of $("presets").children) b.classList.remove("on"); $("warn").textContent = ""; });
+    init();
+  </script>
+</body>
+</html>

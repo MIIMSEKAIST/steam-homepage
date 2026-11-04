@@ -4,17 +4,39 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bayesian Optimization 기반 NCM811 합성 조건 추천 — STEAM Project Hub</title>
-  <meta name="description" content="문헌·실험 데이터 기반 surrogate Random Forest를 이용한 NCM811 양극재 합성 조건 → 방전 용량 예측 상위 3개 (read-only 데모)" />
+  <meta name="description" content="문헌·실험 데이터 기반 surrogate Random Forest를 이용한 NCM811 양극재 합성 조건 → 방전 용량 예측 상위 3개 (STEAM 통합 백엔드 API)" />
   <meta name="theme-color" content="#f6f8fb" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="assets/steam.css" />
+  <script src="assets/steam-config.js"></script>
   <script defer src="assets/steam-ui.js"></script>
   <style data-page>
-    .frame-wrap{position:relative; width:100%; min-height:920px; background:#fbfcfe}
-    .frame-wrap iframe{width:100%; height:100%; min-height:920px; border:0; display:block}
-    .frame-loading{position:absolute; inset:0; display:grid; place-items:center; color:var(--faint); pointer-events:none}
+    .bo-grid{display:grid; gap:18px; grid-template-columns:1fr; align-items:start}
+    @media (min-width:900px){ .bo-grid{grid-template-columns:1fr 2fr} }
+    .sec-title{font-size:14px; font-weight:800; letter-spacing:-.01em; margin:0 0 10px}
+    .range-row{display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:10px; align-items:center; padding:5px 0; border-bottom:1px dashed var(--border)}
+    .range-row:last-child{border-bottom:none}
+    .range-row.head{padding:0 0 4px; border-bottom:1px solid var(--border)}
+    .range-row.head .label{margin:0}
+    .range-row .name{font-size:13px; font-weight:600; line-height:1.3}
+    .range-row .name small{color:var(--faint); font-weight:500; font-size:11.5px; margin-left:6px}
+    .result-wrap th{white-space:nowrap}
+    .chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;
+          background:var(--accent-weak); color:var(--accent); border:1px solid #c7d9fb; white-space:nowrap}
+    .chip.ok{background:var(--ok-weak); color:var(--ok); border-color:#bbe7c8}
+    .chip.bad{background:#fef2f2; color:var(--danger); border-color:#fecaca}
+    .result-wrap{overflow-x:auto; margin-top:14px}
+    .result-wrap table{width:100%; font-size:12.5px}
+    .result-wrap th, .result-wrap td{padding:8px 7px}
+    .result-wrap td.num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+    .result-wrap tr.top td{background:var(--ok-weak)}
+    .result-wrap td.cap{font-weight:800}
     .meta-note{padding:14px 18px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; line-height:1.6}
     .meta-note strong{color:var(--fg)}
+    .api-line{font-size:12.5px; color:var(--faint); margin-top:8px}
+    .api-line code{background:#f2f4f8; padding:1px 6px; border-radius:6px}
+    .fallback{display:none; margin-top:10px; padding:12px 14px; border:1px solid #fde68a; background:var(--warn-weak); border-radius:var(--r-sm); font-size:13px}
+    .fallback.show{display:block}
   </style>
 </head>
 <body data-nav="models">
@@ -27,7 +49,7 @@
 
     <section class="page-hero">
       <div class="kicker">Machine Learning Model</div>
-      <h1>Bayesian Optimization 기반 NCM811 합성 조건 추천 <span class="badge external" style="vertical-align:middle">READ-ONLY DEMO</span></h1>
+      <h1>Bayesian Optimization 기반 NCM811 합성 조건 추천 <span class="badge live" style="vertical-align:middle">LIVE · API</span></h1>
       <p class="lead">문헌·실험 데이터로 학습된 Random Forest surrogate가 사용자가 지정한 합성 조건 탐색 범위에서 <strong>예측 방전 용량 상위 3개</strong> 조건을 반환합니다.</p>
     </section>
 
@@ -35,43 +57,175 @@
       <div class="item"><div class="k">모델 유형</div><div class="v">RF Surrogate + Bayesian Optimization</div></div>
       <div class="item"><div class="k">입력</div><div class="v">합성 조건 탐색 범위 (전구체 4범주 + 소성 온도/시간 6정수)</div></div>
       <div class="item"><div class="k">출력</div><div class="v">예측 방전 용량 상위 3개 조건 (mAh/g, 0.1 C)</div></div>
-      <div class="item"><div class="k">런타임</div><div class="v">Hugging Face Space (외부 호스팅)</div></div>
+      <div class="item"><div class="k">런타임</div><div class="v">STEAM 통합 백엔드 (FastAPI · 내부 API 호출)</div></div>
     </section>
 
     <article class="card" style="margin-top:16px">
       <header>
         <h2>인터랙티브 데모</h2>
-        <a class="btn sm" href="https://suenghwan-hwammi.hf.space" target="_blank" rel="noopener">새 탭에서 열기 ↗</a>
+        <span id="modelChip" class="chip">모델 정보 불러오는 중…</span>
       </header>
-      <div class="frame-wrap">
-        <div class="frame-loading" id="loadingMsg">모델 데모를 불러오는 중…</div>
-        <iframe
-          id="boFrame"
-          src="https://suenghwan-hwammi.hf.space"
-          title="NCM811 BO Demo"
-          allow="clipboard-write"
-          referrerpolicy="no-referrer"
-          onload="document.getElementById('loadingMsg').style.display='none'"
-        ></iframe>
+      <div class="body">
+        <div class="bo-grid">
+          <div>
+            <h3 class="sec-title">① 전구체 조합</h3>
+            <div class="row" id="catBox"></div>
+          </div>
+          <div>
+            <h3 class="sec-title">② 합성 조건 탐색 범위</h3>
+            <div id="rangeBox"></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="runBtn" disabled>Top-3 추천 실행</button>
+          <label class="hint" for="topK">추천 개수</label>
+          <select id="topK" style="width:auto"><option value="3" selected>3</option><option value="5">5</option><option value="10">10</option></select>
+          <button class="btn ghost" id="resetBtn">범위 초기화</button>
+          <span class="hint" id="elapsed"></span>
+        </div>
+        <div id="warn" class="warn"></div>
+        <div id="fallback" class="fallback">
+          API 서버에 연결할 수 없습니다. 서버가 잠시 내려갔거나 깨어나는 중일 수 있으니 잠시 후 새로고침해 주세요.
+          서버 상태: <a href="https://suenghwan-hwammi.hf.space/api/health" target="_blank" rel="noopener"><strong>API health ↗</strong></a>
+        </div>
+
+        <div class="result-wrap" id="resultWrap" hidden>
+          <div class="hint" id="precLine" style="margin-bottom:8px"></div>
+          <table>
+            <thead>
+              <tr>
+                <th>순위</th>
+                <th>수열 온도 (°C)</th><th>수열 시간 (h)</th>
+                <th>1차 소성 온도 (°C)</th><th>1차 소성 시간 (h)</th>
+                <th>2차 소성 온도 (°C)</th><th>2차 소성 시간 (h)</th>
+                <th>예측 용량 (mAh/g)</th><th>±σ (트리 분산)</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+          </table>
+          <div class="api-line" id="apiLine"></div>
+        </div>
       </div>
       <div class="meta-note">
         <strong>모델 정보.</strong>
         Surrogate: scikit-learn RandomForestRegressor (n_estimators=500, random_state=0).
-        학습 데이터: NCM811 합성·전기화학 평가 문헌 + 사내 BO 실험 결과 누적 데이터.
-        입력 공간: 4 범주형(전구체) + 6 정수(수열·1차·2차 소성 온도/시간).
-        출력 단위: mAh/g (0.1 C-rate 기준).
+        학습 데이터: NCM811 합성·전기화학 평가 문헌 + 사내 BO 실험 결과 누적 데이터 (버전별 학습 스냅샷·모델 카드 보관).
+        입력 공간: 4 범주형(전구체) + 6 정수(수열·1차·2차 소성 온도/시간). 출력 단위: mAh/g (0.1 C-rate 기준).
         <br /><br />
-        <strong>안전성.</strong> 본 데모는 옵티마이저 상태 파일을 로드하지 않으며, 사용자 입력은
-        surrogate predict에만 사용됩니다 (BO 루프의 <code class="mono">opt.tell()</code> 호출 없음 = 상태 오염 0).
+        <strong>아키텍처.</strong> 이전의 Hugging Face Space iframe 대신 STEAM 통합 백엔드의
+        <code class="mono">POST /api/bo/recommend</code>를 직접 호출합니다. 옵티마이저 상태 파일은 로드하지 않으며,
+        사용자 입력은 surrogate predict에만 사용됩니다 (<code class="mono">opt.tell()</code> 호출 없음 = 상태 오염 0).
+        새 실험 결과는 재학습 파이프라인을 통해 새 모델 버전으로 반영되고 무중단 교체됩니다.
       </div>
     </article>
   </main>
 
   <script>
-    // iframe 로드 실패 시 안내
-    document.getElementById('boFrame').addEventListener('error', ()=>{
-      document.getElementById('loadingMsg').textContent = '데모를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.';
-    });
+    const API = (window.STEAM_API_BASE || "").replace(/\/$/, "");
+    const $ = (id) => document.getElementById(id);
+    let SCHEMA = null;
+
+    const num = (v) => Number(v);
+    const fmt = (v) => (Math.round(v * 100) / 100).toFixed(2);
+
+    function buildForm(s) {
+      const cat = $("catBox"); cat.innerHTML = "";
+      for (const c of s.categorical) {
+        const wrap = document.createElement("div");
+        wrap.innerHTML = `<div class="label">${c.name.replace("_", " ")}</div>`;
+        const sel = document.createElement("select"); sel.id = "cat_" + c.name;
+        for (const ch of c.choices) { const o = document.createElement("option"); o.value = ch; o.textContent = ch; sel.appendChild(o); }
+        wrap.appendChild(sel); cat.appendChild(wrap);
+      }
+      const rb = $("rangeBox");
+      rb.innerHTML = `<div class="range-row head"><div class="label">조건 <small style="font-weight:500">(모델 범위)</small></div><div class="label">하한</div><div class="label">상한</div></div>`;
+      for (const n of s.numerical) {
+        const row = document.createElement("div"); row.className = "range-row";
+        row.innerHTML = `
+          <div class="name">${n.label}<small>${n.min} – ${n.max}</small></div>
+          <div><input type="number" id="lo_${n.name}" min="${n.min}" max="${n.max}" step="${n.step}" value="${n.min}" aria-label="${n.label} 하한" /></div>
+          <div><input type="number" id="hi_${n.name}" min="${n.min}" max="${n.max}" step="${n.step}" value="${n.max}" aria-label="${n.label} 상한" /></div>`;
+        rb.appendChild(row);
+      }
+    }
+
+    function readForm() {
+      const precursors = {}, ranges = {};
+      for (const c of SCHEMA.categorical) precursors[c.name] = $("cat_" + c.name).value;
+      for (const n of SCHEMA.numerical) {
+        const lo = num($("lo_" + n.name).value), hi = num($("hi_" + n.name).value);
+        if (!Number.isFinite(lo) || !Number.isFinite(hi)) throw new Error(`${n.label}: 숫자를 입력하세요`);
+        if (lo > hi) throw new Error(`${n.label}: 하한(${lo}) > 상한(${hi})`);
+        if (lo < n.min || hi > n.max) throw new Error(`${n.label}: 모델 범위 ${n.min}–${n.max}를 벗어났습니다`);
+        ranges[n.name] = [lo, hi];
+      }
+      return { precursors, ranges, top_k: num($("topK").value) };
+    }
+
+    function render(res) {
+      const tb = $("resultBody"); tb.innerHTML = "";
+      const k0 = res.candidates[0] ? res.candidates[0].conditions : {};
+      $("precLine").innerHTML = `전구체 조합 — Li: <strong>${k0.Li_Precursor || "-"}</strong> · Ni: <strong>${k0.Ni_Precursor || "-"}</strong> · Co: <strong>${k0.Co_Precursor || "-"}</strong> · Mn: <strong>${k0.Mn_Precursor || "-"}</strong>`;
+      res.candidates.forEach((c, i) => {
+        const k = c.conditions;
+        const tr = document.createElement("tr"); if (i === 0) tr.className = "top";
+        tr.innerHTML = `<td>${c.rank}</td>
+          <td class="num">${k.Hydrothermal_Temperature}</td><td class="num">${k.Hydrothermal_Time}</td>
+          <td class="num">${k.First_Calcination_Temperature}</td><td class="num">${k.First_Calcination_Time}</td>
+          <td class="num">${k.Second_Calcination_Temperature}</td><td class="num">${k.Second_Calcination_Time}</td>
+          <td class="num cap">${fmt(c.predicted_capacity)}</td><td class="num">${fmt(c.std)}</td>`;
+        tb.appendChild(tr);
+      });
+      $("apiLine").innerHTML = `<code>POST ${API || ""}/api/bo/recommend</code> · 모델 ${res.model_id} ${res.version} (학습 ${res.n_train}개) · 후보 ${res.n_evaluated.toLocaleString()}개 평가 · 서버 ${res.elapsed_ms} ms`;
+      $("resultWrap").hidden = false;
+    }
+
+    async function run() {
+      $("warn").textContent = ""; $("elapsed").textContent = "";
+      let body;
+      try { body = readForm(); } catch (e) { $("warn").textContent = e.message; return; }
+      $("runBtn").disabled = true; $("runBtn").textContent = "계산 중…";
+      const t0 = performance.now();
+      try {
+        const r = await fetch(API + "/api/bo/recommend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e.detail && (e.detail.errors || e.detail)) ? JSON.stringify(e.detail.errors || e.detail) : `HTTP ${r.status}`); }
+        render(await r.json());
+        $("elapsed").textContent = `왕복 ${Math.round(performance.now() - t0)} ms`;
+      } catch (e) {
+        $("warn").textContent = "요청 실패: " + e.message;
+        if (e instanceof TypeError) $("fallback").classList.add("show");
+      } finally {
+        $("runBtn").disabled = false; $("runBtn").textContent = `Top-${$("topK").value} 추천 실행`;
+      }
+    }
+
+    let initTries = 0;
+    async function init() {
+      try {
+        const r = await fetch(API + "/api/bo/schema", { cache: "no-store" });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        SCHEMA = await r.json();
+        buildForm(SCHEMA);
+        const m = SCHEMA.metrics || {};
+        $("modelChip").className = "chip ok";
+        $("modelChip").textContent = `모델 ${SCHEMA.version} · 학습 ${SCHEMA.n_train}개` + (m.oob_r2 != null ? ` · OOB R² ${m.oob_r2}` : "") + (m.cv_rmse != null ? ` · CV RMSE ${m.cv_rmse}` : "");
+        $("runBtn").disabled = false;
+        if (new URLSearchParams(location.search).get("autorun")) run();
+      } catch (e) {
+        // A sleeping (free-tier) API server wakes up in 20–60 s: keep retrying before giving up.
+        if (++initTries < 18) {
+          $("modelChip").className = "chip"; $("modelChip").textContent = `API 서버 연결 중… (${initTries * 5} s, 슬립 상태면 최대 1분)`;
+          setTimeout(init, 5000); return;
+        }
+        $("modelChip").className = "chip bad"; $("modelChip").textContent = "API 연결 실패";
+        $("fallback").classList.add("show");
+      }
+    }
+    $("runBtn").addEventListener("click", run);
+    $("topK").addEventListener("change", () => { $("runBtn").textContent = `Top-${$("topK").value} 추천 실행`; });
+    $("resetBtn").addEventListener("click", () => { if (SCHEMA) buildForm(SCHEMA); $("warn").textContent = ""; });
+    init();
   </script>
 </body>
 </html>
